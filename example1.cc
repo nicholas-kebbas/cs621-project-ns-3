@@ -35,7 +35,7 @@
    LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
  
    NodeContainer nodes;
-   nodes.Create (2);
+   nodes.Create (4);
  
    PointToPointHelper pointToPoint;
    pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
