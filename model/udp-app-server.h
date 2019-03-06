@@ -72,8 +72,11 @@ private:
 
   uint16_t m_port; //!< Port on which we listen for incoming packets.
   uint16_t m_size; //!< Size of packets
-  uint16_t m_count;//!< Number of packets
-  float m_duration; //!< Time
+  uint16_t m_count;//!< Max number of packets
+  uint16_t m_received_l;//!< Number of packets received
+  uint16_t m_received_h;//!< Number of packets received
+  float m_duration_l; //!< Time
+  float m_duration_h; //!< Time
   std::chrono::system_clock::time_point m_first_t; //!< first clock
   std::chrono::system_clock::time_point m_last_t;  //!< last clock
   Ptr<Socket> m_socket; //!< IPv4 Socket

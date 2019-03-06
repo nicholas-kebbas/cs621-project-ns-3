@@ -53,6 +53,11 @@ UdpAppServer::GetTypeId (void)
                    UintegerValue (9),
                    MakeUintegerAccessor (&UdpAppServer::m_port),
                    MakeUintegerChecker<uint16_t> ())
+    .AddAttribute ("MaxPackets", 
+                   "The maximum number of packets the application will send",
+                   UintegerValue (6000),
+                   MakeUintegerAccessor (&UdpAppServer::m_count),
+                   MakeUintegerChecker<uint32_t> ())
     .AddTraceSource ("Rx", "A packet has been received",
                      MakeTraceSourceAccessor (&UdpAppServer::m_rxTrace),
                      "ns3::Packet::TracedCallback")
@@ -72,8 +77,11 @@ UdpAppServer::UdpAppServer ()
   NS_LOG_FUNCTION (this);
   std::chrono::system_clock::time_point m_first_t;
   std::chrono::system_clock::time_point m_last_t;
-  m_count = 0;
-  m_duration = 0;
+  m_received_l = 0;
+  m_received_h = 0;
+  m_duration_l = 0;
+  m_duration_h = 0;
+
 }
 
 UdpAppServer::~UdpAppServer()
@@ -153,14 +161,14 @@ void
 UdpAppServer::StopApplication ()
 {
   NS_LOG_FUNCTION (this);
-  typedef std::chrono::milliseconds ms;
-  typedef std::chrono::duration<float> fsec;
-  m_last_t = high_resolution_clock::now();
-  fsec fs = m_last_t - m_first_t;
-  m_duration = fs.count();
-  auto d = std::chrono::duration_cast<ms>(fs);
-  std::cout << m_duration << "s\n"; // Take duration between first and last packets
-  std::cout << d.count() << "ms\n"; // Take duration between first and last packets
+  // typedef std::chrono::milliseconds ms;
+  // typedef std::chrono::duration<float> fsec;
+  // fsec fs = m_last_t - m_first_t;
+  // m_duration_l = fs.count();
+  // auto d = std::chrono::duration_cast<ms>(fs);
+  std::cout << "low entropy:  " << m_duration_l << "s\n"; // Take duration between first and last packets in seconds
+  // std::cout << d.count() << "ms\n"; // Take duration between first and last packets in milliseconds
+  std::cout << "high entropy: " << m_duration_h << "s\n";
 
   if (m_socket != 0) 
     {
@@ -178,19 +186,57 @@ void
 UdpAppServer::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
-  m_count++;
-  if(m_count == 1) 
+  ++m_received_l;
+  if(m_received_l == 1) 
     {
-      std::cout << "Got first packet...\n";
+      std::cout << "Got first low entropy packet...\n";
       m_first_t = high_resolution_clock::now(); // Start clock when get first packet
     } 
+  else 
+    {
+      if(m_received_l < m_count)
+        {
+          m_last_t = high_resolution_clock::now();
+          std::cout << "Receieved le packet " << m_received_l << "\n";
+        }
+      else
+        {
+          if(m_received_h == 0) 
+            {
+                // typedef std::chrono::milliseconds ms;
+                typedef std::chrono::duration<float> fsec;
+                fsec fs = m_last_t - m_first_t;
+                m_duration_l = fs.count();
+            }
+          ++m_received_h;
+          if(m_received_h < m_count)
+            {
+              if(m_received_h == 1) 
+                {
+                  std::cout << "Got first high entropy packet...\n";
+                  m_first_t = high_resolution_clock::now(); // Start clock when get first packet
+                } 
+              else
+                {
+                  m_last_t = high_resolution_clock::now();
+                  std::cout << "Receieved he packet " << m_received_h << "\n";
+                }
+            }
+          else
+            {
+                // typedef std::chrono::milliseconds ms;
+                typedef std::chrono::duration<float> fsec;
+                fsec fs = m_last_t - m_first_t;
+                m_duration_h = fs.count();            
+            }
+        }
+    }
   Ptr<Packet> packet;
   Address from;
   Address localAddress;
   while ((packet = socket->RecvFrom (from)))
     {
       // Uncomment to enable checking if packets are correctly sending
-      std::cout << "Receieved packet: " << m_count << "\n";
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
@@ -227,7 +273,7 @@ UdpAppServer::HandleRead (Ptr<Socket> socket)
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
     }
-    // std::cout << "Finished stuff: " << m_count << "\n";
+    // std::cout << "Finished stuff: " << m_received_l << "\n";
 }
 
 } // Namespace ns3

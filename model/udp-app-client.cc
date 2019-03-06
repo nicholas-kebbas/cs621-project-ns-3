@@ -86,7 +86,8 @@ UdpAppClient::GetTypeId (void)
 UdpAppClient::UdpAppClient ()
 {
   NS_LOG_FUNCTION (this);
-  m_sent = 0;
+  m_sent_l = 0;
+  m_sent_h = 0;
   m_socket = 0;
   m_sendEvent = EventId ();
   m_data = 0;
@@ -172,16 +173,27 @@ UdpAppClient::StartApplication (void)
         }
     }
 
+  std::cout << "Start first send.\n";
+  // if (m_sent_l == m_count) 
+  //   {
+  //     std::cout << "sent " << m_sent_l << " packets already.\n";
+  //   }
   m_socket->SetRecvCallback (MakeCallback (&UdpAppClient::HandleRead, this));
   m_socket->SetAllowBroadcast (true);
   ScheduleTransmit (Seconds (0.));
+  // m_sent_l = 0;
+  // std::cout << "Sent first packets.\n";
+  // std::cout << "Start second send.\n";
+  // m_socket->SetRecvCallback (MakeCallback (&UdpAppClient::HandleRead, this));
+  // m_socket->SetAllowBroadcast (true);
+  // ScheduleTransmit (Seconds (0.5));
 }
 
 void 
 UdpAppClient::StopApplication ()
 {
   NS_LOG_FUNCTION (this);
-
+  std::cout << "Stopping client.\n";
   if (m_socket != 0) 
     {
       m_socket->Close ();
@@ -303,6 +315,13 @@ UdpAppClient::ScheduleTransmit (Time dt)
 }
 
 void 
+UdpAppClient::ScheduleHighEntropyTransmit (Time dt)
+{
+  NS_LOG_FUNCTION (this << dt);
+  m_sendEvent = Simulator::Schedule (dt, &UdpAppClient::Send, this);
+}
+
+void 
 UdpAppClient::Send (void)
 {
   NS_LOG_FUNCTION (this);
@@ -320,6 +339,7 @@ UdpAppClient::Send (void)
       //
       NS_ASSERT_MSG (m_dataSize == m_size, "UdpAppClient::Send(): m_size and m_dataSize inconsistent");
       NS_ASSERT_MSG (m_data, "UdpAppClient::Send(): m_dataSize but no m_data");
+      // std::cout << "Reached max packets: " << (m_sent_l == m_count) << "\n";
       p = Create<Packet> (m_data, m_dataSize);
     }
   else
@@ -347,8 +367,15 @@ UdpAppClient::Send (void)
       m_txTraceWithAddresses (p, localAddress, Inet6SocketAddress (Ipv6Address::ConvertFrom (m_peerAddress), m_peerPort));
     }
   m_socket->Send (p);
-  ++m_sent;
-  // std::cout << "Sent packet " << m_sent << "\n"; // Print to check # of packets sent
+  if (m_sent_l < m_count)
+    {
+      ++m_sent_l;
+    }
+  else
+    {
+      ++m_sent_h;
+    }
+  // std::cout << "Sent packet " << m_sent_l << "\n"; // Print to check # of packets sent
   if (Ipv4Address::IsMatchingType (m_peerAddress))
     {
       NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client sent " << m_size << " bytes to " <<
@@ -370,9 +397,19 @@ UdpAppClient::Send (void)
                    Inet6SocketAddress::ConvertFrom (m_peerAddress).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort ());
     }
 
-  if (m_sent < m_count) 
+  if (m_sent_l < m_count) 
     {
       ScheduleTransmit (m_interval);
+    }
+  else
+    {
+      // std::cout << "sent " << m_sent_l << " low entropy packets. Send the next high entropy packets.\n";
+      if (m_sent_h < m_count) 
+        {
+          // std::cout << "Sending dummy message " << m_sent_h << "\n";
+          ScheduleTransmit (m_interval);
+          // ScheduleHighEntropyTransmit (m_interval);
+        }
     }
 }
 

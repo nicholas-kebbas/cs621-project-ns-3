@@ -143,6 +143,11 @@ private:
    * \param dt time interval between packets.
    */
   void ScheduleTransmit (Time dt);
+ /**
+   * \brief Schedule the next packet transmission
+   * \param dt time interval between packets.
+   */
+  void ScheduleHighEntropyTransmit (Time dt);
   /**
    * \brief Send a packet
    */
@@ -164,7 +169,8 @@ private:
   uint32_t m_dataSize; //!< packet payload size (must be equal to m_size)
   uint8_t *m_data; //!< packet payload data
 
-  uint32_t m_sent; //!< Counter for sent packets
+  uint32_t m_sent_l; //!< Counter for sent packets
+  uint32_t m_sent_h; //!< Counter for sent packets
   Ptr<Socket> m_socket; //!< Socket
   Address m_peerAddress; //!< Remote peer address
   uint16_t m_peerPort; //!< Remote peer port
