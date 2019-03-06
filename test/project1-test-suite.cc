@@ -1,7 +1,7 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 // Include a header file from your module to test.
-#include "ns3/cs621-project-ns-3.h"
+#include "ns3/project1.h"
 
 // An essential include is test.h
 #include "ns3/test.h"
@@ -11,25 +11,25 @@
 using namespace ns3;
 
 // This is an example TestCase.
-class Cs621ProjectNs3TestCase1 : public TestCase
+class Project1TestCase1 : public TestCase
 {
 public:
-  Cs621ProjectNs3TestCase1 ();
-  virtual ~Cs621ProjectNs3TestCase1 ();
+  Project1TestCase1 ();
+  virtual ~Project1TestCase1 ();
 
 private:
   virtual void DoRun (void);
 };
 
 // Add some help text to this case to describe what it is intended to test
-Cs621ProjectNs3TestCase1::Cs621ProjectNs3TestCase1 ()
-  : TestCase ("Cs621ProjectNs3 test case (does nothing)")
+Project1TestCase1::Project1TestCase1 ()
+  : TestCase ("Project1 test case (does nothing)")
 {
 }
 
 // This destructor does nothing but we include it as a reminder that
 // the test case should clean up after itself
-Cs621ProjectNs3TestCase1::~Cs621ProjectNs3TestCase1 ()
+Project1TestCase1::~Project1TestCase1 ()
 {
 }
 
@@ -38,7 +38,7 @@ Cs621ProjectNs3TestCase1::~Cs621ProjectNs3TestCase1 ()
 // TestCase must implement
 //
 void
-Cs621ProjectNs3TestCase1::DoRun (void)
+Project1TestCase1::DoRun (void)
 {
   // A wide variety of test macros are available in src/core/test.h
   NS_TEST_ASSERT_MSG_EQ (true, true, "true doesn't equal true for some reason");
@@ -50,19 +50,19 @@ Cs621ProjectNs3TestCase1::DoRun (void)
 // and enables the TestCases to be run.  Typically, only the constructor for
 // this class must be defined
 //
-class Cs621ProjectNs3TestSuite : public TestSuite
+class Project1TestSuite : public TestSuite
 {
 public:
-  Cs621ProjectNs3TestSuite ();
+  Project1TestSuite ();
 };
 
-Cs621ProjectNs3TestSuite::Cs621ProjectNs3TestSuite ()
-  : TestSuite ("cs621-project-ns-3", UNIT)
+Project1TestSuite::Project1TestSuite ()
+  : TestSuite ("project1", UNIT)
 {
   // TestDuration for TestCase can be QUICK, EXTENSIVE or TAKES_FOREVER
-  AddTestCase (new Cs621ProjectNs3TestCase1, TestCase::QUICK);
+  AddTestCase (new Project1TestCase1, TestCase::QUICK);
 }
 
 // Do not forget to allocate an instance of this TestSuite
-static Cs621ProjectNs3TestSuite cs621ProjectNs3TestSuite;
+static Project1TestSuite project1TestSuite;
 

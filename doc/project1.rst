@@ -23,7 +23,7 @@ are defined in the file ``replace.txt``.
 Model Description
 *****************
 
-The source code for the new module lives in the directory ``src/cs621-project-ns-3``.
+The source code for the new module lives in the directory ``src/project1``.
 
 Add here a basic description of what is being modeled.
 

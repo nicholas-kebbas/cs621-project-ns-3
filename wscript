@@ -7,22 +7,30 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('cs621-project-ns-3', ['core', 'point-to-point', 'internet', 'applications'])
+    module = bld.create_ns3_module('project1', ['core', 'applications', 'internet', 'csma', 'config-store','stats'])
     module.source = [
-        'model/cs621-project-ns-3.cc',
-        'helper/cs621-project-ns-3-helper.cc',
+        'model/project1.cc',
+        'model/point-to-point-net-device.cc',
+        'model/udp-app-client.cc',
+        'model/udp-app-server.cc',
+        'helper/udp-app-helper.cc',
+        'helper/project1-helper.cc',
         ]
 
-    module_test = bld.create_ns3_module_test_library('cs621-project-ns-3')
+    module_test = bld.create_ns3_module_test_library('project1')
     module_test.source = [
-        'test/cs621-project-ns-3-test-suite.cc',
+        'test/project1-test-suite.cc',
         ]
 
     headers = bld(features='ns3header')
-    headers.module = 'cs621-project-ns-3'
+    headers.module = 'project1'
     headers.source = [
-        'model/cs621-project-ns-3.h',
-        'helper/cs621-project-ns-3-helper.h',
+        'model/project1.h',
+        'model/point-to-point-net-device.h',
+        'model/udp-app-client.h',
+        'model/udp-app-server.h',
+        'helper/udp-app-helper.h',
+        'helper/project1-helper.h',
         ]
 
     if bld.env.ENABLE_EXAMPLES:

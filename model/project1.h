@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-#ifndef CS621_PROJECT_NS_3_H
-#define CS621_PROJECT_NS_3_H
+#ifndef PROJECT1_H
+#define PROJECT1_H
 
 namespace ns3 {
 
@@ -8,5 +8,5 @@ namespace ns3 {
 
 }
 
-#endif /* CS621_PROJECT_NS_3_H */
+#endif /* PROJECT1_H */
 

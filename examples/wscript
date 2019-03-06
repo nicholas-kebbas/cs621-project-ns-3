@@ -1,8 +1,9 @@
 # -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
 
 def build(bld):
-    obj = bld.create_ns3_program('cs621-project-ns-3-example', ['core', 'point-to-point', 'internet', 'applications'])
-    obj.source = 'cs621-project-ns-3-example.cc'
-    obj = bld.create_ns3_program('point-to-point-comp-test-example', ['core', 'point-to-point', 'internet', 'applications'])
-    obj.source = 'point-to-point-comp-test-example.cc'
+    obj = bld.create_ns3_program('project1-example', ['project1'])
+    obj.source = 'project1-example.cc'
+    obj = bld.create_ns3_program('udp-app', ['project1', 'csma', 'internet', 'applications', 'config-store','stats'])
+    obj.source = 'udp-app.cc'
+
 
