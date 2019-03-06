@@ -26,7 +26,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/pointer.h"
 #include "ns3/net-device-queue-interface.h"
-#include "point-to-point-net-device.h"
+#include "point-to-point-compression-net-device.h"
 #include "point-to-point-channel.h"
 #include "ppp-header.h"
 

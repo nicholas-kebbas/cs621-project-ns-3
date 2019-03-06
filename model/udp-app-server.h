@@ -24,6 +24,7 @@
 #include "ns3/ptr.h"
 #include "ns3/address.h"
 #include "ns3/traced-callback.h"
+#include <chrono>
 
 namespace ns3 {
 
@@ -71,6 +72,10 @@ private:
 
   uint16_t m_port; //!< Port on which we listen for incoming packets.
   uint16_t m_size; //!< Size of packets
+  uint16_t m_count;//!< Number of packets
+  float m_duration; //!< Time
+  std::chrono::system_clock::time_point m_first_t; //!< first clock
+  std::chrono::system_clock::time_point m_last_t;  //!< last clock
   Ptr<Socket> m_socket; //!< IPv4 Socket
   Ptr<Socket> m_socket6; //!< IPv6 Socket
   Address m_local; //!< local multicast address

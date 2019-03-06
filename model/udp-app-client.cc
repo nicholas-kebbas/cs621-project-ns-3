@@ -40,7 +40,7 @@ UdpAppClient::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UdpAppClient")
     .SetParent<Application> ()
-    .SetGroupName("Project1")
+    .SetGroupName("Applications")
     .AddConstructor<UdpAppClient> ()
     .AddAttribute ("MaxPackets", 
                    "The maximum number of packets the application will send",
@@ -63,9 +63,9 @@ UdpAppClient::GetTypeId (void)
                    MakeUintegerAccessor (&UdpAppClient::m_peerPort),
                    MakeUintegerChecker<uint16_t> ())
     .AddAttribute ("PacketSize", "Size of packets generated",
-                      UintegerValue (100),
-                      MakeUintegerAccessor (&UdpAppClient::m_size),
-                      MakeUintegerChecker<uint32_t> ())
+                    UintegerValue (1100),
+                    MakeUintegerAccessor (&UdpAppClient::m_size),
+                    MakeUintegerChecker<uint32_t> ())
     .AddTraceSource ("Tx", "A new packet is created and is sent",
                      MakeTraceSourceAccessor (&UdpAppClient::m_txTrace),
                      "ns3::Packet::TracedCallback")
@@ -82,6 +82,7 @@ UdpAppClient::GetTypeId (void)
   return tid;
 }
 
+// Constructors
 UdpAppClient::UdpAppClient ()
 {
   NS_LOG_FUNCTION (this);
@@ -347,7 +348,7 @@ UdpAppClient::Send (void)
     }
   m_socket->Send (p);
   ++m_sent;
-
+  // std::cout << "Sent packet " << m_sent << "\n"; // Print to check # of packets sent
   if (Ipv4Address::IsMatchingType (m_peerAddress))
     {
       NS_LOG_INFO ("At time " << Simulator::Now ().GetSeconds () << "s client sent " << m_size << " bytes to " <<

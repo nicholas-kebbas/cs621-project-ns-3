@@ -16,17 +16,17 @@
 
 // Network topology
 //
-//       n0    n1
-//       |     |
-//       =======
-//         LAN
+// (S)-----(R1)[compression]<--->compression-link<---->[decompression](R2)-----(R)
 //
-// - UDP flows from n0 to n1
+// - UDP flows from S to the R1 P2P IP Link where compression may occur
+//       R1 then relays packets, compressed or not, to R2 who then relays them to
+//       receiver node R.
 
 #include <fstream>
 #include "ns3/core-module.h"
 #include "ns3/csma-module.h"
 #include "ns3/applications-module.h"
+#include "ns3/project1-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/internet-module.h"
 #include <nlohmann/json.hpp>
@@ -52,9 +52,9 @@ main (int argc, char *argv[])
   Address udpServerInterfaces;
   Address p2pInterfaces;
 
+// command line interface. Allow for additional parameters to change application.
   CommandLine cmd;
   cmd.AddValue ("useIpv6", "Use Ipv6", useV6);
-  // cmd.Parse (argc, argv);
   cmd.AddValue ("maxBandwidth", "Maximum bandwidth", maxBandwidth);
   cmd.AddValue ("compressionEnabled", "Enable compression", compressionEnabled);
   cmd.Parse (argc, argv);
@@ -77,7 +77,7 @@ main (int argc, char *argv[])
   NodeContainer p2pNodes;
   p2pNodes.Create (2);
 
-  // Setup p2p nodes
+  // Setup p2p nodes for the IP link
   PointToPointHelper pointToPoint;
   pointToPoint.SetDeviceAttribute ("DataRate", StringValue (dataRate + "Mbps"));
   pointToPoint.SetDeviceAttribute ("Compression", BooleanValue (compressionEnabled));
@@ -90,8 +90,6 @@ main (int argc, char *argv[])
   udpNodes.Create (2);
 
 // p2pNetDevice container
-  // NetDeviceContainer p2pDevices;
-  // p2pDevices = pointToPoint.Install (p2pNodes);
   NetDeviceContainer p2pDevices = pointToPoint.Install (p2pNodes);
 
   NS_LOG_INFO ("Create channels.");

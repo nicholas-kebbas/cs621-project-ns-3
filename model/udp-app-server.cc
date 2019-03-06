@@ -29,8 +29,12 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
+#include <chrono>
 
 #include "udp-app-server.h"
+
+using std::chrono::high_resolution_clock;
+// using std::chrono::system_clock;
 
 namespace ns3 {
 
@@ -43,7 +47,7 @@ UdpAppServer::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::UdpAppServer")
     .SetParent<Application> ()
-    .SetGroupName("Project1")
+    .SetGroupName("Applications")
     .AddConstructor<UdpAppServer> ()
     .AddAttribute ("Port", "Port on which we listen for incoming packets.",
                    UintegerValue (9),
@@ -66,6 +70,10 @@ UdpAppServer::GetTypeId (void)
 UdpAppServer::UdpAppServer ()
 {
   NS_LOG_FUNCTION (this);
+  std::chrono::system_clock::time_point m_first_t;
+  std::chrono::system_clock::time_point m_last_t;
+  m_count = 0;
+  m_duration = 0;
 }
 
 UdpAppServer::~UdpAppServer()
@@ -135,6 +143,8 @@ UdpAppServer::StartApplication (void)
         }
     }
 
+  // std::cout << "Init contact with client...\n"; 
+    // m_first_t = high_resolution_clock::now(); // Start clock when get first packet
   m_socket->SetRecvCallback (MakeCallback (&UdpAppServer::HandleRead, this));
   m_socket6->SetRecvCallback (MakeCallback (&UdpAppServer::HandleRead, this));
 }
@@ -143,6 +153,14 @@ void
 UdpAppServer::StopApplication ()
 {
   NS_LOG_FUNCTION (this);
+  typedef std::chrono::milliseconds ms;
+  typedef std::chrono::duration<float> fsec;
+  m_last_t = high_resolution_clock::now();
+  fsec fs = m_last_t - m_first_t;
+  m_duration = fs.count();
+  auto d = std::chrono::duration_cast<ms>(fs);
+  std::cout << m_duration << "s\n"; // Take duration between first and last packets
+  std::cout << d.count() << "ms\n"; // Take duration between first and last packets
 
   if (m_socket != 0) 
     {
@@ -160,12 +178,19 @@ void
 UdpAppServer::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
-
+  m_count++;
+  if(m_count == 1) 
+    {
+      std::cout << "Got first packet...\n";
+      m_first_t = high_resolution_clock::now(); // Start clock when get first packet
+    } 
   Ptr<Packet> packet;
   Address from;
   Address localAddress;
   while ((packet = socket->RecvFrom (from)))
     {
+      // Uncomment to enable checking if packets are correctly sending
+      std::cout << "Receieved packet: " << m_count << "\n";
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
@@ -202,6 +227,7 @@ UdpAppServer::HandleRead (Ptr<Socket> socket)
                        Inet6SocketAddress::ConvertFrom (from).GetPort ());
         }
     }
+    // std::cout << "Finished stuff: " << m_count << "\n";
 }
 
 } // Namespace ns3

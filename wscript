@@ -7,10 +7,9 @@
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
-    module = bld.create_ns3_module('project1', ['core', 'applications', 'internet', 'csma', 'config-store','stats'])
+    module = bld.create_ns3_module('project1', ['point-to-point','applications','core', 'internet', 'csma', 'config-store','stats'])
     module.source = [
         'model/project1.cc',
-        'model/point-to-point-net-device.cc',
         'model/udp-app-client.cc',
         'model/udp-app-server.cc',
         'helper/udp-app-helper.cc',
@@ -26,7 +25,6 @@ def build(bld):
     headers.module = 'project1'
     headers.source = [
         'model/project1.h',
-        'model/point-to-point-net-device.h',
         'model/udp-app-client.h',
         'model/udp-app-server.h',
         'helper/udp-app-helper.h',

@@ -3,7 +3,7 @@
 def build(bld):
     obj = bld.create_ns3_program('project1-example', ['project1'])
     obj.source = 'project1-example.cc'
-    obj = bld.create_ns3_program('udp-app', ['project1', 'csma', 'internet', 'applications', 'config-store','stats'])
+    obj = bld.create_ns3_program('udp-app', ['project1', 'point-to-point','csma', 'internet', 'config-store','stats'])
     obj.source = 'udp-app.cc'
 
 
