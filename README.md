@@ -45,5 +45,5 @@ ZLib Compression
 https://www.zlib.net/manual.html
 Will probably be using inflate
 ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
-inflate decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush
+inflate decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush.
 

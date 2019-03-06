@@ -143,11 +143,6 @@ private:
    * \param dt time interval between packets.
    */
   void ScheduleTransmit (Time dt);
- /**
-   * \brief Schedule the next packet transmission
-   * \param dt time interval between packets.
-   */
-  void ScheduleHighEntropyTransmit (Time dt);
   /**
    * \brief Send a packet
    */

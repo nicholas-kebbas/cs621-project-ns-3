@@ -54,7 +54,7 @@ UdpAppServer::GetTypeId (void)
                    MakeUintegerAccessor (&UdpAppServer::m_port),
                    MakeUintegerChecker<uint16_t> ())
     .AddAttribute ("MaxPackets", 
-                   "The maximum number of packets the application will send",
+                   "The maximum number of packets the application will receive.",
                    UintegerValue (6000),
                    MakeUintegerAccessor (&UdpAppServer::m_count),
                    MakeUintegerChecker<uint32_t> ())
@@ -81,7 +81,7 @@ UdpAppServer::UdpAppServer ()
   m_received_h = 0;
   m_duration_l = 0;
   m_duration_h = 0;
-
+  receivedAllLowEntropy = false;
 }
 
 UdpAppServer::~UdpAppServer()
@@ -166,9 +166,17 @@ UdpAppServer::StopApplication ()
   // fsec fs = m_last_t - m_first_t;
   // m_duration_l = fs.count();
   // auto d = std::chrono::duration_cast<ms>(fs);
-  std::cout << "low entropy:  " << m_duration_l << "s\n"; // Take duration between first and last packets in seconds
+  std::cout << "low entropy:  " << m_duration_l << "ms\n"; // Take duration between first and last packets in seconds
   // std::cout << d.count() << "ms\n"; // Take duration between first and last packets in milliseconds
-  std::cout << "high entropy: " << m_duration_h << "s\n";
+  std::cout << "high entropy: " << m_duration_h << "ms\n";
+  if(m_duration_h - m_duration_l > 100) 
+    {
+      std::cout << "∆t_H − ∆t_L = " << m_duration_h - m_duration_l << "ms. Compression detected!\n";
+    }
+  else
+    {
+      std::cout << "∆t_H − ∆t_L = " << m_duration_h - m_duration_l << "ms. No compression detected.\n";
+    }
 
   if (m_socket != 0) 
     {
@@ -186,49 +194,55 @@ void
 UdpAppServer::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
-  ++m_received_l;
-  if(m_received_l == 1) 
+  // std::cout << m_received_l << "\n";
+  if (!receivedAllLowEntropy)
     {
-      std::cout << "Got first low entropy packet...\n";
-      m_first_t = high_resolution_clock::now(); // Start clock when get first packet
-    } 
-  else 
-    {
-      if(m_received_l < m_count)
+      ++m_received_l;
+      // std::cout << "Receieved le packet " << m_received_l << "\n";
+      if(m_received_l == 1) 
+        {
+          std::cout << "Got first low entropy packet " << m_received_l << "\n";
+          m_first_t = high_resolution_clock::now(); // Start clock when get first packet
+        }
+      else if (m_received_l < m_count)
         {
           m_last_t = high_resolution_clock::now();
-          std::cout << "Receieved le packet " << m_received_l << "\n";
+          
         }
-      else
+      else if (m_received_l == m_count)
         {
-          if(m_received_h == 0) 
-            {
-                // typedef std::chrono::milliseconds ms;
-                typedef std::chrono::duration<float> fsec;
-                fsec fs = m_last_t - m_first_t;
-                m_duration_l = fs.count();
-            }
-          ++m_received_h;
-          if(m_received_h < m_count)
-            {
-              if(m_received_h == 1) 
-                {
-                  std::cout << "Got first high entropy packet...\n";
-                  m_first_t = high_resolution_clock::now(); // Start clock when get first packet
-                } 
-              else
-                {
-                  m_last_t = high_resolution_clock::now();
-                  std::cout << "Receieved he packet " << m_received_h << "\n";
-                }
-            }
-          else
-            {
-                // typedef std::chrono::milliseconds ms;
-                typedef std::chrono::duration<float> fsec;
-                fsec fs = m_last_t - m_first_t;
-                m_duration_h = fs.count();            
-            }
+          m_last_t = high_resolution_clock::now();
+          std::cout << "Got last low entropy packet " << m_received_l << "\n";
+          typedef std::chrono::milliseconds ms;
+          typedef std::chrono::duration<float> fsec;
+          fsec fs = m_last_t - m_first_t;
+          auto d = std::chrono::duration_cast<ms>(fs);
+          m_duration_l = d.count();
+          receivedAllLowEntropy = true;
+        }
+    }
+  else
+    {
+      ++m_received_h;
+      // std::cout << "Receieved he packet " << m_received_h << "\n";
+      if(m_received_h == 1) 
+        {
+          std::cout << "Got first high entropy packet " << m_received_h << "\n";
+          m_first_t = high_resolution_clock::now(); // Start clock when get first packet
+        }
+      else if (m_received_h < m_count)
+        {
+          m_last_t = high_resolution_clock::now();
+        }
+      else if(m_received_h == m_count)
+        {
+          m_last_t = high_resolution_clock::now();
+          std::cout << "Got last high entropy packet " << m_received_h << "\n";
+          typedef std::chrono::milliseconds ms;
+          typedef std::chrono::duration<float> fsec;
+          fsec fs = m_last_t - m_first_t;
+          auto d = std::chrono::duration_cast<ms>(fs);
+          m_duration_h = d.count();            
         }
     }
   Ptr<Packet> packet;

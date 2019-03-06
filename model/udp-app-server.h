@@ -75,6 +75,7 @@ private:
   uint16_t m_count;//!< Max number of packets
   uint16_t m_received_l;//!< Number of packets received
   uint16_t m_received_h;//!< Number of packets received
+  bool receivedAllLowEntropy;
   float m_duration_l; //!< Time
   float m_duration_h; //!< Time
   std::chrono::system_clock::time_point m_first_t; //!< first clock

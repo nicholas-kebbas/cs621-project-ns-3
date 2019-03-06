@@ -149,8 +149,8 @@ main (int argc, char *argv[])
   UdpAppServerHelper server (port);
   server.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
   ApplicationContainer udpApps = server.Install (udpNodes.Get (1));
-  udpApps.Start (Seconds (1.0));
-  udpApps.Stop (Seconds (300.0));
+  udpApps.Start (Seconds (0));
+  udpApps.Stop (Seconds (3000.0));
 
 //
 // Create one UdpClient application to send UDP datagrams from node zero to
@@ -166,29 +166,17 @@ main (int argc, char *argv[])
   // Install udp client node into the app
   std::cout << "First round\n";
   udpApps = appClient.Install (udpNodes.Get (0));
-  udpApps.Start (Seconds (2.0));
-  udpApps.Stop (Seconds (300.0));
-  // udpApps.Start (Seconds (120.1));
-  // udpApps.Stop (Seconds (240.0));
-  uint8_t fill[] = { 0, 1, 0, 1, 1, 0 };
-  appClient.SetFill (udpApps.Get (0), fill, sizeof(fill), 1024);
+  // udpApps.Start (Seconds (1200.0));
+  // udpApps.Stop (Seconds (3000.0));
+
+  // uint8_t fill[] = { 0, 1, 0, 1, 1, 0 };
+  // appClient.SetFill (udpApps.Get (0), fill, sizeof(fill), 1024);
+
   // Install p2p nodes into the app
   ApplicationContainer p2pClient = appClient.Install (p2pNodes.Get (0));
-  p2pClient.Start (Seconds (2.0));
-  p2pClient.Stop (Seconds (300.0));
-
-
-  // std::cout << "Second round\n";
-
-  // udpApps = server.Install (udpNodes.Get (1));
-  // udpApps.Start (Seconds (1.0));
-  // udpApps.Stop (Seconds (120.0));
-  // udpApps = appClient.Install (udpNodes.Get (0));
-  // udpApps.Start (Seconds (2.0));
-  // udpApps.Stop (Seconds (120.0));
-  // p2pClient = appClient.Install (p2pNodes.Get (0));
   // p2pClient.Start (Seconds (2.0));
-  // p2pClient.Stop (Seconds (120.0));
+  // p2pClient.Stop (Seconds (300.0));
+
 // #if 0
 // set fill for packet data
 // #endif
@@ -201,8 +189,6 @@ main (int argc, char *argv[])
   csma.EnablePcapAll ("udp-app-l", false);
   pointToPoint.EnablePcapAll ("udp-p2p-l", false);
 
-  // udpApps.Start (Seconds (120.5));
-  // udpApps.Stop (Seconds (120.0));
 //
 // Now, do the actual simulation.
 //
@@ -210,27 +196,4 @@ main (int argc, char *argv[])
   Simulator::Run ();
   Simulator::Destroy ();
   NS_LOG_INFO ("Done.");
-  std::cout << "Done 1.\n";
-
-  // udpApps = server.Install (udpNodes.Get (1));
-  // udpApps.Start (Seconds (1.0));
-  // udpApps.Stop (Seconds (120.0));
-
-  // // udpApps = appClient.Install (udpNodes.Get (0));
-  // udpApps.Start (Seconds (1.0));
-  // udpApps.Stop (Seconds (120.0));
-
-  // // p2pClient = appClient.Install (p2pNodes.Get (0));
-  // p2pClient.Start (Seconds (2.0));
-  // p2pClient.Stop (Seconds (120.0));
-
-  // csma.EnableAsciiAll (ascii.CreateFileStream ("udp-app-h.tr"));
-  // csma.EnablePcapAll ("udp-app-h", false);
-  // pointToPoint.EnablePcapAll ("udp-p2p-h", false);
-
-  // NS_LOG_INFO ("Run Simulation.");
-  // Simulator::Run ();
-  // Simulator::Destroy ();
-  // NS_LOG_INFO ("Done.");
-  // std::cout << "Done 2.\n";
 }
