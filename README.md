@@ -9,7 +9,7 @@ Pull the entire repo into a new folder named project1.  Now go to your NS-3 inst
 
 The ```nlohmann``` folder must also be copy-pasted into the NS-3 root folder, where ```src``` is.
 
-The two ```point-to-point-net-device``` files must be copied into ```src/point-to-point/model```.
+The two ```point-to-point-net-device``` files in ```/project1/model``` must be copied into ```src/point-to-point/model```.
 
 If you would like to add new files to the application, models will go in the model folder, examples in the example folder, etc... To ensure these get built correctly, make sure to edit the corresponding `wscript` files. New examples require the wscript in /examples to be updated. These files are where you can tell waf what modules, classes, etc. your application is going to be using. When waf builds ns3 again, your module will know what other headers it needs to include when running. 
 
