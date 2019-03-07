@@ -5,7 +5,9 @@ This project implements NS-3 to test an application that allows server-client en
 
 ## Migrating Code into NS-3
 
-Pull the entire repo into a new folder. You can name it whatever suites you. Now go to your NS-3 installation folder. From here you will go to the /src folder and place the newly created repo folder into it. For example, it would look something like this ```/ns-3.29/src/cs621-project-ns-3``` Where /ns-3.29 is our current installation of NS-3.
+Pull the entire repo into a new folder named project1.  Now go to your NS-3 installation folder. From here you will go to the /src folder and place the newly created repo folder into it. For example, it would look something like this ```/ns-3.29/src/project1```, where /ns-3.29 is our current installation of NS-3.
+
+The ```nlohmann``` folder must also be copy-pasted into the NS-3 root folder, where ```src``` is.
 
 If you would like to add new files to the application, models will go in the model folder, examples in the example folder, etc... To ensure these get built correctly, make sure to edit the corresponding `wscript` files. New examples require the wscript in /examples to be updated. These files are where you can tell waf what modules, classes, etc. your application is going to be using. When waf builds ns3 again, your module will know what other headers it needs to include when running. 
 
@@ -37,7 +39,7 @@ Additionally, you some applications allow you to input additional parameters int
 ./waf --run "udp-app --maxBandwidth=8 --compressionEnabled=true"
 ```
 
-This command  will let the UDP application run with compression enabled. 
+This command  will let the UDP application run with compression enabled, and it will set the PointToPointNetDevice's Data Rate to 8Mbps. 
 
 ## Compression/Decompression
 
