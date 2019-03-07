@@ -45,6 +45,12 @@ This command  will let the UDP application run with compression enabled, and it 
 
 ZLib Compression
 https://www.zlib.net/manual.html
+
+To install zlib run:
+```
+sudo apt-get install zlib1g-dev
+```
+
 Will probably be using inflate
 ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
 inflate decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush.
