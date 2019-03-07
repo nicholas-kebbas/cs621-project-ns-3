@@ -31,10 +31,10 @@ To run a module, simply do a command like the following:
 ./waf --run <module name>
 ```
 
-Additionally, you some applications allow you to input additional parameters into the command line to change the way it runs. If you wanted to do that use something like the following command instead:
+Additionally, you some applications allow you to input additional parameters into the command line to change the way it runs. For this program this command would be the following:
 
 ```
-./waf --run "udp-app --compressionEnabled=true --<additionalParameter>=<value>"
+./waf --run "udp-app --maxBandwidth=8 --compressionEnabled=true"
 ```
 
 This command  will let the UDP application run with compression enabled. 
