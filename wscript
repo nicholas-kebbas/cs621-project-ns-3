@@ -3,7 +3,8 @@
 # def options(opt):
 #     pass
 
-# def configure(conf):
+def configure(conf):
+    conf.env['lz'] = conf.check(mandatory=True, lib='z', uselib_store='LZ')
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
