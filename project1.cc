@@ -29,11 +29,8 @@
 #include "ns3/project1-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/internet-module.h"
-#include <nlohmann/json.hpp>
-#include <iomanip>
 
 using namespace ns3;
-using json = nlohmann::json;
 
 NS_LOG_COMPONENT_DEFINE ("UdpClientServerExample");
 
@@ -60,22 +57,18 @@ main (int argc, char *argv[])
   cmd.Parse (argc, argv);
   printf("Specified maximum bandwidth: %d\n", maxBandwidth);
 
-// Read config file; take inputstream from the file and put it all in json j
-  std::ifstream jsonIn("config.json");
-  json j;
-  jsonIn >> j;
-// Print the pretty json to the terminal
-  std::cout << std::setw(4) << j << std::endl;
-  std::string protocol = "";
-
-// Get the string value from protocolsToCompress and print it
-  protocol = j["protocolsToCompress"].get<std::string>();
-  std::cout << protocol << "\n";
-
 // Set data rate for point to point
   std::string dataRate (std::to_string(maxBandwidth));
+
+  NodeContainer comp;
+  comp.Create(1);
+  NodeContainer decomp;
+  decomp.Create(1);
   NodeContainer p2pNodes;
-  p2pNodes.Create (2);
+  // p2pNodes.Create (2);
+  p2pNodes.Add (comp.Get (0));
+  p2pNodes.Add (decomp.Get (0));
+
 
   // Setup p2p nodes for the IP link
   PointToPointHelper pointToPoint;
@@ -86,8 +79,14 @@ main (int argc, char *argv[])
 // Explicitly create the nodes required by the topology (shown above).
 //
   NS_LOG_INFO ("Create nodes.");
+  NodeContainer sender;
+  sender.Create(1);
+  NodeContainer receiver;
+  receiver.Create(1);
   NodeContainer udpNodes;
-  udpNodes.Create (2);
+  udpNodes.Add (sender.Get (0));
+  udpNodes.Add (receiver.Get (0));
+  // udpNodes.Create (2);
 
 // p2pNetDevice container
   NetDeviceContainer p2pDevices = pointToPoint.Install (p2pNodes);
@@ -105,8 +104,8 @@ main (int argc, char *argv[])
 
   // Internet
   InternetStackHelper internet;
-  internet.Install (udpNodes);
   internet.Install (p2pNodes);
+  internet.Install (udpNodes);
 
   // CsmaHelper csmaServer;
   // csmaServer.SetChannelAttribute ("DataRate", DataRateValue (DataRate (5000000)));
@@ -148,9 +147,12 @@ main (int argc, char *argv[])
   uint32_t maxPacketCount = 6000;
   UdpAppServerHelper server (port);
   server.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
-  ApplicationContainer udpApps = server.Install (udpNodes.Get (1));
-  udpApps.Start (Seconds (0));
-  udpApps.Stop (Seconds (3000.0));
+  ApplicationContainer serverApp = server.Install (udpNodes.Get (1));
+  server.Install (p2pNodes.Get (1));
+  // ApplicationContainer serverApp = server.Install (p2pNodes.Get (1));
+  // ApplicationContainer udpApps = server.Install (udpNodes.Get (1));
+  serverApp.Start (Seconds (1.0));
+  serverApp.Stop (Seconds (3000.0));
 
 //
 // Create one UdpClient application to send UDP datagrams from node zero to
@@ -159,23 +161,28 @@ main (int argc, char *argv[])
   uint32_t MaxPacketSize = 1024;
   Time interPacketInterval = Seconds (0.015);
   UdpAppClientHelper appClient (udpServerInterfaces, port);
-  // UdpAppClientHelper appClient (p2pInterfaces, port);
   appClient.SetAttribute ("MaxPackets", UintegerValue (maxPacketCount));
   appClient.SetAttribute ("Interval", TimeValue (interPacketInterval));
   appClient.SetAttribute ("PacketSize", UintegerValue (MaxPacketSize));
   // Install udp client node into the app
-  std::cout << "First round\n";
-  udpApps = appClient.Install (udpNodes.Get (0));
-  // udpApps.Start (Seconds (1200.0));
-  // udpApps.Stop (Seconds (3000.0));
+  // std::cout << "First round\n";
+  ApplicationContainer clientApp = appClient.Install (udpNodes.Get (0));
+  appClient.Install (p2pNodes.Get (0));
+  // ApplicationContainer clientApp = appClient.Install (p2pNodes.Get (0));
+  clientApp.Start (Seconds (1.0));
+  clientApp.Stop (Seconds (3000.0));
 
   // uint8_t fill[] = { 0, 1, 0, 1, 1, 0 };
   // appClient.SetFill (udpApps.Get (0), fill, sizeof(fill), 1024);
 
+  ApplicationContainer p2pServer = appClient.Install (p2pNodes.Get (1));
+  p2pServer.Start (Seconds (1.0));
+  p2pServer.Stop (Seconds (30000.0));
+
   // Install p2p nodes into the app
   ApplicationContainer p2pClient = appClient.Install (p2pNodes.Get (0));
-  // p2pClient.Start (Seconds (2.0));
-  // p2pClient.Stop (Seconds (300.0));
+  p2pClient.Start (Seconds (2.0));
+  // p2pClient.Stop (Seconds (30000.0));
 
 // #if 0
 // set fill for packet data
@@ -186,8 +193,17 @@ main (int argc, char *argv[])
 
   AsciiTraceHelper ascii;;
   csma.EnableAsciiAll (ascii.CreateFileStream ("udp-app-l.tr"));
-  csma.EnablePcapAll ("udp-app-l", false);
-  pointToPoint.EnablePcapAll ("udp-p2p-l", false);
+
+  // receiver.EnablePcapAll("UDPreceiver", false);
+  // sender.EnablePcapAll("UDPsender", false);
+  // decomp.EnablePcapAll("Decompression", false);
+  // comp.EnablePcapAll("Compression", false);
+  csma.EnablePcap ("UDPreceiver", receiver, false);
+  csma.EnablePcap ("UDPsender", sender, false);
+  pointToPoint.EnablePcap ("comp", comp, false);
+  pointToPoint.EnablePcap ("decomp", decomp, false);
+  // csma.EnablePcapAll ("udp-app", false);
+  // pointToPoint.EnablePcapAll ("udp-p2p", false);
 
 //
 // Now, do the actual simulation.
