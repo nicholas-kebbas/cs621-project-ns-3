@@ -28,6 +28,11 @@
 
 #include "ns3/trace-helper.h"
 
+#include <assert.h>
+extern "C"{
+#include "zlib.h"
+}
+
 namespace ns3 {
 
 class NetDevice;
@@ -149,6 +154,13 @@ public:
    * Saves you from having to construct a temporary NodeContainer.
    */
   NetDeviceContainer Install (std::string aNode, std::string bNode);
+
+
+  /** Compress Data packets 
+
+  */
+
+  Ptr<Packet> Compress (Ptr<Packet> p_packet);
 
 private:
   /**
