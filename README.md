@@ -17,6 +17,7 @@ If you would like to add new files to the application, models will go in the mod
 
 Now that all the files are copied to the right locations, go to the root of your ns3 installation (like ns-3.29 from earlier) and do
 
+
 ```
 ./waf configure -d optimized --enable-examples --enable-tests
 ```
