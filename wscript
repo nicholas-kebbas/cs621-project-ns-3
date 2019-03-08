@@ -3,13 +3,7 @@
 # def options(opt):
 #     pass
 
-def configure(conf):
-    conf.env['lz'] = conf.check(mandatory=True, lib='z', uselib_store='LZ')
-    conf.env['ENABLE_LZ']=conf.check(mandatory=True,
-lib='z',uselib_store='LZ')
-
-
-   # conf.env.append_value("CXXFLAGS", ["-lz"])
+# def configure(conf):
 #     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
 
 def build(bld):
@@ -36,10 +30,12 @@ def build(bld):
         'helper/udp-app-helper.h',
         'helper/project1-helper.h',
         ]
-    module.use.append("LZ")
+    module.use.append("ZLIB1G")
     if bld.env.ENABLE_EXAMPLES:
         bld.recurse('examples')
-    #bld(features='c cxx cxxprogram', use=['LZ','z'], lib=['z'])
+
+def configure(conf):
+     conf.env['zlib1g'] = conf.check(mandatory=True, lib='z', uselib_store='ZLIB1G')
 
     # bld.ns3_python_bindings()
 
