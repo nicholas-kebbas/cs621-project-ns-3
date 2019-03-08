@@ -30,6 +30,11 @@
 #include "udp-app-client.h"
 #include <chrono>
 #include <thread>
+// the following are for the random fill
+#include <iostream>
+#include <unistd.h>
+#include <fcntl.h>
+#include <fstream>
 
 namespace ns3 {
 
@@ -94,6 +99,8 @@ UdpAppClient::UdpAppClient ()
   m_sendEvent = EventId ();
   m_data = 0;
   m_dataSize = 0;
+  // uint8_t **packets = new uint8_t *[6000];
+
 }
 
 UdpAppClient::~UdpAppClient()
@@ -132,6 +139,8 @@ void
 UdpAppClient::StartApplication (void)
 {
   NS_LOG_FUNCTION (this);
+
+  // call the function that reads the file & fills out the packets array
 
   if (m_socket == 0)
     {
@@ -394,11 +403,21 @@ UdpAppClient::Send (void)
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       ScheduleTransmit (m_interval);  
       // ScheduleTransmit (Seconds (20.0));
+
+       // we need an alternate ScheduleTransmit function that will provide the packet contents
+      // packets[m_sent_l-6000] is the array provided
+
     }
   else if (m_sent_l < m_count*2) 
     {
       // std::cout << "Sending dummy message " << m_sent_h << "\n";
       ScheduleTransmit (m_interval);
+      // sending a high entropy packet 
+
+      // we need an alternate ScheduleTransmit function that will provide the packet contents
+      // packets[m_sent_l-6000] is the array provided
+
+
     }
 }
 
@@ -428,5 +447,69 @@ UdpAppClient::HandleRead (Ptr<Socket> socket)
       m_rxTraceWithAddresses (packet, from, localAddress);
     }
 }
+
+/*
+// note: need to edit the header file also
+void
+UdpAppClient::FillInPacketArray()
+ for (int i = 0; i < 6000; i++) {
+        packets[i] = new uint8_t[1024];
+    }
+
+    int i = 0;
+    int j;
+    std::ifstream randomfile("randomfile");
+    if (!randomfile.good()) { // if file does not already exist
+        std::ofstream randomoutfile("randomfile"); // makes file and fills it in
+
+        uint8_t buffer[768000]; // 128*6000 random 8-bit #s
+        int fd = open("/dev/random", O_RDONLY);
+        read(fd, buffer, 768000); // put it in buffer
+        //buffer now contains the random data
+        close(fd);
+
+        for (i = 0; i < 6000; ++i) { // 6000 packets: 1 line per
+            for (int j = 0; j < 128; j++) { // 128 numbers * 8 bits = 1024
+                randomoutfile << std::bitset<8>(buffer[(128 * i) + j]);
+            }
+            randomoutfile << "\n";
+        }
+        randomoutfile.close();
+    }
+
+    std::string line;
+    i = 0;
+
+
+    // reads file in a line at a time as a string
+    // converts string to uint8_t* and puts in packets array
+    while (std::getline(randomfile, line))
+    {
+        //std::istringstream iss(line);
+        //cout << line;
+        //cout << "\n";
+        //cout << sizeof(line);
+
+        const uint8_t* p = reinterpret_cast<const uint8_t*>(line.c_str());
+        for (int x = 0; x < 1024; x++) {
+            packets[i][x] = p[x];
+        }
+
+       //std::cout << sizeof(line) << "\n";
+        //if (i > 2) {
+        //    int x = i - 1;
+        //    std::cout << i << " " << sizeof(&packets[i]) <<" " << packets[i] << "\n";
+        //    std::cout << x << " " << sizeof(&packets[i-1]) <<" " << packets[i-1] << "\n";
+        //    std::cout << i-2 << " " << packets[i-2] << "\n\n";
+        }
+
+        i++;
+
+    }
+
+    randomfile.close();
+
+
+*/
 
 } // Namespace ns3
