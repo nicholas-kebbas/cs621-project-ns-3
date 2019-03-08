@@ -29,6 +29,7 @@
 #include "ns3/socket-factory.h"
 #include "ns3/packet.h"
 #include "ns3/uinteger.h"
+#include "ns3/ppp-header.h"
 #include <chrono>
 
 #include "udp-app-server.h"
@@ -194,6 +195,11 @@ void
 UdpAppServer::HandleRead (Ptr<Socket> socket)
 {
   NS_LOG_FUNCTION (this << socket);
+  Ptr<Packet> packet;
+  Address from;
+  Address localAddress;
+  while ((packet = socket->RecvFrom (from)))
+    {
   // std::cout << m_received_l << "\n";
   if (!receivedAllLowEntropy)
     {
@@ -245,12 +251,6 @@ UdpAppServer::HandleRead (Ptr<Socket> socket)
           m_duration_h = d.count();            
         }
     }
-  Ptr<Packet> packet;
-  Address from;
-  Address localAddress;
-  while ((packet = socket->RecvFrom (from)))
-    {
-      // Uncomment to enable checking if packets are correctly sending
       socket->GetSockName (localAddress);
       m_rxTrace (packet);
       m_rxTraceWithAddresses (packet, from, localAddress);
