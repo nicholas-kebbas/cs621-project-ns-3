@@ -29,10 +29,17 @@
 #include "point-to-point-net-device.h"
 #include "point-to-point-channel.h"
 #include "ppp-header.h"
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <iomanip>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
 extern "C"{
 #include "zlib.h"
 }
-#define CHUNK 16384
+
+using json = nlohmann::json;
 
 namespace ns3 {
 
@@ -190,7 +197,7 @@ PointToPointNetDevice::PointToPointNetDevice ()
     m_currentPkt (0)
 {
   NS_LOG_FUNCTION (this);
-  m_count = 0;
+  m_protocol = 0;
 }
 
 PointToPointNetDevice::~PointToPointNetDevice ()
@@ -223,20 +230,39 @@ PointToPointNetDevice::DoInitialize (void)
   if (m_queueInterface)
     {
       NS_ASSERT_MSG (m_queue != 0, "A Queue object has not been attached to the device");
-
-      if (compressionEnabled)
-        {
-          std::cout << "Compression is enabled!\n";
-        }
       // connect the traced callbacks of m_queue to the static methods provided by
       // the NetDeviceQueue class to support flow control and dynamic queue limits.
       // This could not be done in NotifyNewAggregate because at that time we are
       // not guaranteed that a queue has been attached to the netdevice
       m_queueInterface->ConnectQueueTraces (m_queue, 0);
     }
+  if (compressionEnabled)
+    {
+      std::cout << "Compression is enabled!\n";
+    }
+// Read config file; take inputstream from the file and put it all in json j
+  std::ifstream jsonIn("./config.json");
+  json j;
+  jsonIn >> j;
+// Print the pretty json to the terminal
+  std::cout << std::setw(4) << j << std::endl;
+  std::string protocol = "";
+
+// Get the string value from protocolsToCompress and print it
+  protocol = j["protocolsToCompress"].get<std::string>();
+  std::istringstream buffer(protocol);
+  buffer >> std::hex >> m_protocol;
+  std::cout << "Protocol to compress: 0x" << std::hex << m_protocol << "\n";
+  m_protocol = PppToEther(m_protocol);
 
   NetDevice::DoInitialize ();
 }
+
+// bool
+// PointToPointNetDevice::IsCompressionEnabled (void)
+// {
+//   return compressionEnabled;
+// }
 
 void
 PointToPointNetDevice::NotifyNewAggregate (void)
@@ -352,7 +378,7 @@ PointToPointNetDevice::Attach (Ptr<PointToPointChannel> ch)
   NS_LOG_FUNCTION (this << &ch);
 
   m_channel = ch;
-
+  m_channel->IsCompressionEnabled (compressionEnabled);
   m_channel->Attach (this);
 
   //
@@ -383,7 +409,7 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
 {
   NS_LOG_FUNCTION (this << packet);
   uint16_t protocol = 0;
-  m_count++;
+  // m_count++;
   // std::cout << "Receive packet " << m_count << "\n";
   if (m_receiveErrorModel && m_receiveErrorModel->IsCorrupt (packet) ) 
     {
@@ -410,22 +436,99 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
       //
       Ptr<Packet> originalPacket = packet->Copy ();
 
-      //
-      // Strip off the point-to-point protocol header and forward this packet
-      // up the protocol stack.  Since this is a simple point-to-point link,
-      // there is no difference in what the promisc callback sees and what the
-      // normal receive callback sees.
-      //
-      ProcessHeader (packet, protocol);
-
-      if (!m_promiscCallback.IsNull ())
+      if (compressionEnabled)
         {
-          m_macPromiscRxTrace (originalPacket);
-          m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
-        }
+          // Ptr<Packet> pCopy = originalPacket->Copy();
+          // // Packet checking stuff
+          PppHeader header;
+          // Packet p = packet.operator*();  // Get the packet from the Ptr
+          // /*uint32_t packetBytes =*/ 
+          packet->PeekHeader(header); // Get the header from the packet
+          uint16_t currentProtocol = header.GetProtocol();
+          // std::cout << "recv: got packet: 0x" << std::hex << currentProtocol << "\n";
+          switch (currentProtocol)
+            {
+              case 0x4021:  // LZS
+                {
+                  std::cout << "recv: Got LZS packet: 0x" << std::hex << currentProtocol << "\n";
+                  // PppHeader newHeader;
+                  // newHeader.SetProtocol(0x0021);
+                  // // // packet->RemoveHeader(header);
+                  // packet->AddHeader(newHeader);
+                  // ProcessHeader(packet, protocol);
+                  // std::cout << "\tConverting to : " << protocol << "\n";
 
-      m_macRxTrace (originalPacket);
-      m_rxCallback (this, packet, protocol, GetRemote ());
+                  // // PppHeader dummy;
+                  // // pCopy->PeekHeader(dummy);
+                  // // uint16_t pCopyProtocol = dummy.GetProtocol();
+                  // std::cout << "Converting to : " << newProtocol << "\n";
+                  // uint16_t ipProtocol = 0x0021;
+                  // ProcessHeader (packet, ipProtocol);
+
+                  // if (!m_promiscCallback.IsNull ())
+                  //   {
+                  //     m_macPromiscRxTrace (pCopy);
+                  //     m_promiscCallback (this, pCopy, ipProtocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
+                  //   }
+
+                  // m_macRxTrace (pCopy);
+                  // m_rxCallback (this, pCopy, ipProtocol, GetRemote ());
+                  // return;
+
+                  // ProcessHeader (pCopy, protocol);
+
+                  // if (!m_promiscCallback.IsNull ())
+                  //   {
+                  //     m_macPromiscRxTrace (originalPacket);
+                  //     m_promiscCallback (this, packet, newProtocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
+                  //   }
+
+                  // m_macRxTrace (originalPacket);
+                  // m_rxCallback (this, packet, newProtocol, GetRemote ());
+                  break;
+                }
+            }
+
+          //
+          // Strip off the point-to-point protocol header and forward this packet
+          // up the protocol stack.  Since this is a simple point-to-point link,
+          // there is no difference in what the promisc callback sees and what the
+          // normal receive callback sees.
+          //
+
+          ProcessHeader (packet, protocol);
+
+          if (!m_promiscCallback.IsNull ())
+            {
+              m_macPromiscRxTrace (originalPacket);
+              m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
+            }
+
+          m_macRxTrace (originalPacket);
+          // m_rxCallback (this, pCopy, protocol, GetRemote ());
+          m_rxCallback (this, packet, protocol, GetRemote ());
+        } 
+      else
+        {
+          //
+          // Strip off the point-to-point protocol header and forward this packet
+          // up the protocol stack.  Since this is a simple point-to-point link,
+          // there is no difference in what the promisc callback sees and what the
+          // normal receive callback sees.
+          //
+          // ProcessHeader (packet, protocol);
+          ProcessHeader (packet, protocol);
+
+
+          if (!m_promiscCallback.IsNull ())
+            {
+              m_macPromiscRxTrace (originalPacket);
+              m_promiscCallback (this, packet, protocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
+            }
+
+          m_macRxTrace (originalPacket);
+          m_rxCallback (this, packet, protocol, GetRemote ());
+        }
     }
 }
 
@@ -564,49 +667,221 @@ PointToPointNetDevice::Send (
   NS_LOG_LOGIC ("p=" << packet << ", dest=" << &dest);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
 
-  // std::cout << "my addres=" << m_address << "\n";
-  // std::cout << "Sending packet " << m_count << "to dest=" << &dest << "\n";
-  //
-  // If IsLinkUp() is false it means there is no channel to send any packet 
-  // over so we just hit the drop trace on the packet and return an error.
-  //
-  if (IsLinkUp () == false)
+  // std::cout << "protocol: " << protocolNumber << "\n";
+  // std::cout << "Sending packet=" << packet << "to dest=" << &dest << "\n";
+  if (compressionEnabled)
     {
+      // Ptr<Packet> pCopy = packet->Copy();
+      // // Packet checking stuff
+      // PppHeader header;
+      // Packet p = pCopy.operator*();  // Get the packet from the Ptr
+      // p.PeekHeader(header); // Get the header from the packet
+      // uint16_t protocol = header.GetProtocol();
+
+      if (protocolNumber == m_protocol)  // IPv4
+        {
+          // PppHeader newHeader;
+          // newHeader.SetProtocol(0x4021);
+          // pCopy->RemoveHeader(header);
+          // pCopy->AddHeader(newHeader);
+          // packet.RemoveHeader(header);
+          // packet.AddHeader(newHeader);
+          // PppHeader dummy;
+          // pCopy->PeekHeader(dummy);
+          // uint16_t pCopyrotocol = dummy.GetProtocol();
+          std::cout << "sending: packet with 0x" << std::hex << protocolNumber << "\n";
+          // PppHeader newHeader;
+          // newHeader.SetProtocol(0xFFF0);
+          // packet->RemoveHeader(header);
+          // packet->AddHeader(newHeader);
+          // uint16_t newProtocol;
+          // std::cout << "Converting to : " << newProtocol << "\n";
+          //
+          // If IsLinkUp() is false it means there is no channel to send any packet 
+          // over so we just hit the drop trace on the packet and return an error.
+          //
+          if (IsLinkUp () == false)
+            {
+              m_macTxDropTrace (packet);
+              return false;
+            }
+
+          uint8_t* buffer;
+          packet->CopyData(buffer, 10);
+          packet->Packet(buffer, 10);
+
+          //
+          // Stick a point to point protocol header on the packet in preparation for
+          // shoving it out the door.
+          //
+          AddHeader (packet, 0x4021);  // Ether to PPP header
+          std::cout << "Converting to 0x4021\n";
+
+          // PppHeader dummy;
+          // pCopy->PeekHeader(dummy);
+          // std::cout << "Sending LZS packet: 0x" << std::hex << dummy.GetProtocol() << "\n";
+
+          m_macTxTrace (packet);
+
+          //
+          // We should enqueue and dequeue the packet to hit the tracing hooks.
+          //
+          if (m_queue->Enqueue (packet))
+            {
+              //
+              // If the channel is ready for transition we send the packet right now
+              // 
+              if (m_txMachineState == READY)
+                {
+                  packet = m_queue->Dequeue ();
+                  m_snifferTrace (packet);
+                  m_promiscSnifferTrace (packet);
+                  bool ret = TransmitStart (packet);
+                  return ret;
+                }
+              return true;
+            }
+          // Enqueue may fail (overflow)
+          m_macTxDropTrace (packet);
+          return false;
+        }
+        //   case 0xFFF0:  // LZS
+        //     {
+        //       std::cout << "ND: packet with 0x" << std::hex << protocolNumber << "\n";
+        //       //
+        //       // If IsLinkUp() is false it means there is no channel to send any packet 
+        //       // over so we just hit the drop trace on the packet and return an error.
+        //       //
+        //       if (IsLinkUp () == false)
+        //         {
+        //           m_macTxDropTrace (packet);
+        //           return false;
+        //         }
+
+        //       //
+        //       // Stick a point to point protocol header on the packet in preparation for
+        //       // shoving it out the door.
+        //       //
+        //       AddHeader (packet, 0x0800);
+        //       std::cout << "Converting to 0x0800\n";
+
+        //       m_macTxTrace (packet);
+
+        //       //
+        //       // We should enqueue and dequeue the packet to hit the tracing hooks.
+        //       //
+        //       if (m_queue->Enqueue (packet))
+        //         {
+        //           //
+        //           // If the channel is ready for transition we send the packet right now
+        //           // 
+        //           if (m_txMachineState == READY)
+        //             {
+        //               packet = m_queue->Dequeue ();
+        //               m_snifferTrace (packet);
+        //               m_promiscSnifferTrace (packet);
+        //               bool ret = TransmitStart (packet);
+        //               return ret;
+        //             }
+        //           return true;
+        //         }
+
+        //       // Enqueue may fail (overflow)
+
+        //       m_macTxDropTrace (packet);
+        //       return false;
+        //       break;
+        //     }
+        //   default:
+        //       // std::cout << "nothing\n";
+        //     break;
+        // }
+      //
+      // If IsLinkUp() is false it means there is no channel to send any packet 
+      // over so we just hit the drop trace on the packet and return an error.
+      //
+      if (IsLinkUp () == false)
+        {
+          m_macTxDropTrace (packet);
+          return false;
+        }
+
+      //
+      // Stick a point to point protocol header on the packet in preparation for
+      // shoving it out the door.
+      //
+      AddHeader (packet, protocolNumber);
+
+      m_macTxTrace (packet);
+
+      //
+      // We should enqueue and dequeue the packet to hit the tracing hooks.
+      //
+      if (m_queue->Enqueue (packet))
+        {
+          //
+          // If the channel is ready for transition we send the packet right now
+          // 
+          if (m_txMachineState == READY)
+            {
+              packet = m_queue->Dequeue ();
+              m_snifferTrace (packet);
+              m_promiscSnifferTrace (packet);
+              bool ret = TransmitStart (packet);
+              return ret;
+            }
+          return true;
+        }
+
+      // Enqueue may fail (overflow)
+
       m_macTxDropTrace (packet);
       return false;
-    }
-
-  //
-  // Stick a point to point protocol header on the packet in preparation for
-  // shoving it out the door.
-  //
-  AddHeader (packet, protocolNumber);
-
-  m_macTxTrace (packet);
-
-  //
-  // We should enqueue and dequeue the packet to hit the tracing hooks.
-  //
-  if (m_queue->Enqueue (packet))
+    } 
+  else
     {
-      //
-      // If the channel is ready for transition we send the packet right now
-      // 
-      if (m_txMachineState == READY)
-        {
-          packet = m_queue->Dequeue ();
-          m_snifferTrace (packet);
-          m_promiscSnifferTrace (packet);
-          bool ret = TransmitStart (packet);
-          return ret;
-        }
-      return true;
-    }
+    //
+    // If IsLinkUp() is false it means there is no channel to send any packet 
+    // over so we just hit the drop trace on the packet and return an error.
+    //
+    if (IsLinkUp () == false)
+      {
+        m_macTxDropTrace (packet);
+        return false;
+      }
 
-  // Enqueue may fail (overflow)
+    //
+    // Stick a point to point protocol header on the packet in preparation for
+    // shoving it out the door.
+    //
+    AddHeader (packet, protocolNumber);
 
-  m_macTxDropTrace (packet);
-  return false;
+    m_macTxTrace (packet);
+
+    //
+    // We should enqueue and dequeue the packet to hit the tracing hooks.
+    //
+    if (m_queue->Enqueue (packet))
+      {
+        //
+        // If the channel is ready for transition we send the packet right now
+        // 
+        if (m_txMachineState == READY)
+          {
+            packet = m_queue->Dequeue ();
+            m_snifferTrace (packet);
+            m_promiscSnifferTrace (packet);
+            bool ret = TransmitStart (packet);
+            return ret;
+          }
+        return true;
+      }
+
+    // Enqueue may fail (overflow)
+
+    m_macTxDropTrace (packet);
+    return false;
+  }
 }
 
 bool
@@ -705,6 +980,7 @@ PointToPointNetDevice::PppToEther (uint16_t proto)
   switch(proto)
     {
     case 0x0021: return 0x0800;   //IPv4
+    case 0x4021: return 0x4021;   //LZS
     case 0x0057: return 0x86DD;   //IPv6
     default: NS_ASSERT_MSG (false, "PPP Protocol number not defined!");
     }
@@ -718,134 +994,62 @@ PointToPointNetDevice::EtherToPpp (uint16_t proto)
   switch(proto)
     {
     case 0x0800: return 0x0021;   //IPv4
+    case 0x4021: return 0x4021;   //LZS
     case 0x86DD: return 0x0057;   //IPv6
     default: NS_ASSERT_MSG (false, "PPP Protocol number not defined!");
     }
   return 0;
 }
 
-Ptr<Packet>
-Compress (Ptr<Packet> p_packet)
+//figure out return type
+void
+Compress (char* packetData)
 {
-	// p_packet
-	Ptr<Packet> p = p_packet->Copy ();
-// original string len = 36
-    char a[50] = "Hello Hello Hello Hello Hello Hello!"; 
+  // p_packet
+  // Ptr<Packet> p = p_packet->Copy ();
+  // original string len = 36
+  char b[50];
 
-    // placeholder for the compressed (deflated) version of "a" 
-    char b[50];
+  // zlib struct
+  z_stream defstream;
+  defstream.zalloc = Z_NULL;
+  defstream.zfree = Z_NULL;
+  defstream.opaque = Z_NULL;
+  defstream.avail_in = (uInt)strlen(packetData)+1; // size of input, string + terminator
+  defstream.next_in = (Bytef *)packetData; // input char array
+  defstream.avail_out = (uInt)sizeof(b); // size of output
+  defstream.next_out = (Bytef *)b; // output char array
 
-    // placeholder for the UNcompressed (inflated) version of "b"
-    char c[50];
-     
+  // compress
+  deflateInit(&defstream, Z_BEST_COMPRESSION);
+  deflate(&defstream, Z_FINISH);
+  deflateEnd(&defstream);
 
-    printf("Uncompressed size is: %lu\n", strlen(a));
-    printf("Uncompressed string is: %s\n", a);
-
-
-    printf("\n----------\n\n");
-
-    // STEP 1.
-    // deflate a into b. (that is, compress a into b)
-    
-    // zlib struct
-    z_stream defstream;
-    defstream.zalloc = Z_NULL;
-    defstream.zfree = Z_NULL;
-    defstream.opaque = Z_NULL;
-    // setup "a" as the input and "b" as the compressed output
-    defstream.avail_in = (uInt)strlen(a)+1; // size of input, string + terminator
-    defstream.next_in = (Bytef *)a; // input char array
-    defstream.avail_out = (uInt)sizeof(b); // size of output
-    defstream.next_out = (Bytef *)b; // output char array
-    
-    // the actual compression work.
-    deflateInit(&defstream, Z_BEST_COMPRESSION);
-    deflate(&defstream, Z_FINISH);
-    deflateEnd(&defstream);
-     
-    // This is one way of getting the size of the output
-    printf("Compressed size is: %lu\n", strlen(b));
-    printf("Compressed string is: %s\n", b);
-    
-
-    printf("\n----------\n\n");
-
-
-    // STEP 2.
-    // inflate b into c
-    // zlib struct
-    z_stream infstream;
-    infstream.zalloc = Z_NULL;
-    infstream.zfree = Z_NULL;
-    infstream.opaque = Z_NULL;
-    // setup "b" as the input and "c" as the compressed output
-    infstream.avail_in = (uInt)((char*)defstream.next_out - b); // size of input
-    infstream.next_in = (Bytef *)b; // input char array
-    infstream.avail_out = (uInt)sizeof(c); // size of output
-    infstream.next_out = (Bytef *)c; // output char array
-     
-    // the actual DE-compression work.
-    inflateInit(&infstream);
-    inflate(&infstream, Z_NO_FLUSH);
-    inflateEnd(&infstream);
-     
-    printf("Uncompressed size is: %lu\n", strlen(c));
-    printf("Uncompressed string is: %s\n", c);
-    
-
-    // make sure uncompressed is exactly equal to original.
-    assert(strcmp(a,c)==0);
-	std::string str = p->ToString();
-	return p;
+  printf("Compressed data: %s\n", b);
 }
 
-Ptr<Packet>
-Decompress (Ptr<Packet> p_packet)
+//figure out return type
+void
+Decompress (char* packetData)
 {
-	// p_packet
-	Ptr<Packet> p = p_packet->Copy ();
-// original string len = 36
-    char a[50] = "Hello Hello Hello Hello Hello Hello!"; 
 
-    // placeholder for the compressed (deflated) version of "a" 
     char b[50];
-
-    // placeholder for the UNcompressed (inflated) version of "b"
     char c[50];
-     
 
-    printf("Uncompressed size is: %lu\n", strlen(a));
-    printf("Uncompressed string is: %s\n", a);
-
-
-    printf("\n----------\n\n");
-
-    // STEP 2.
-    // inflate b into c
-    // zlib struct
     z_stream infstream;
     infstream.zalloc = Z_NULL;
     infstream.zfree = Z_NULL;
     infstream.opaque = Z_NULL;
-    // setup "b" as the input and "c" as the compressed output
-    infstream.avail_in = (uInt)((char*)defstream.next_out - b); // size of input
+    
+    // need to determine avail_in still
+    infstream.avail_in = (uInt)((strlen(packetData) - strlen(b))); // size of input
     infstream.next_in = (Bytef *)b; // input char array
     infstream.avail_out = (uInt)sizeof(c); // size of output
     infstream.next_out = (Bytef *)c; // output char array
      
-    // the actual DE-compression work.
+    // decompress
     inflateInit(&infstream);
     inflate(&infstream, Z_NO_FLUSH);
     inflateEnd(&infstream);
-     
-    printf("Uncompressed size is: %lu\n", strlen(c));
-    printf("Uncompressed string is: %s\n", c);
-    
-
-    // make sure uncompressed is exactly equal to original.
-    assert(strcmp(a,c)==0);
-	std::string str = p->ToString();
-	return p;
 }
 } // namespace ns3

@@ -230,8 +230,9 @@ private:
 
 private:
   
-  uint16_t m_count; //<! Incoming packet count
+  uint16_t m_protocol; //<! protocol to compress
   bool compressionEnabled;  //<! If should do compression
+
   /**
    * \returns the address of the remote device connected to this device
    * through the point to point channel.
