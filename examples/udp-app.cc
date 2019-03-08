@@ -31,6 +31,7 @@
 #include "ns3/internet-module.h"
 #include <nlohmann/json.hpp>
 #include <iomanip>
+#include <zlib.h>
 
 using namespace ns3;
 using json = nlohmann::json;
