@@ -378,7 +378,6 @@ PointToPointNetDevice::Attach (Ptr<PointToPointChannel> ch)
   NS_LOG_FUNCTION (this << &ch);
 
   m_channel = ch;
-  m_channel->IsCompressionEnabled (compressionEnabled);
   m_channel->Attach (this);
 
   //
@@ -680,6 +679,8 @@ PointToPointNetDevice::Send (
 
       if (protocolNumber == m_protocol)  // IPv4
         {
+          
+
           // PppHeader newHeader;
           // newHeader.SetProtocol(0x4021);
           // pCopy->RemoveHeader(header);
@@ -717,6 +718,16 @@ PointToPointNetDevice::Send (
           AddHeader (packet, 0x4021);  // Ether to PPP header
           std::cout << "Converting to 0x4021\n";
 
+          uint32_t packetSize = packet->GetSize();
+          /* Allocate enough memory to the buffer so we don't get a seg fault */
+          uint8_t* buffer = new uint8_t[packetSize];
+          uint32_t serializedPacket = packet -> Serialize(buffer, packetSize);
+          std::cout << "Packet" << packetSize << "\n";
+          std::cout << "Serialized Packet: " << serializedPacket << "\n";
+          /* If we successfully serialized, do the next thing */
+          std::cout << "Buffer: " << buffer <<"\n";
+
+          Compress(buffer, packetSize);
           // PppHeader dummy;
           // pCopy->PeekHeader(dummy);
           // std::cout << "Sending LZS packet: 0x" << std::hex << dummy.GetProtocol() << "\n";
@@ -745,61 +756,7 @@ PointToPointNetDevice::Send (
           m_macTxDropTrace (packet);
           return false;
         }
-        //   case 0xFFF0:  // LZS
-        //     {
-        //       std::cout << "ND: packet with 0x" << std::hex << protocolNumber << "\n";
-        //       //
-        //       // If IsLinkUp() is false it means there is no channel to send any packet 
-        //       // over so we just hit the drop trace on the packet and return an error.
-        //       //
-        //       if (IsLinkUp () == false)
-        //         {
-        //           m_macTxDropTrace (packet);
-        //           return false;
-        //         }
 
-        //       //
-        //       // Stick a point to point protocol header on the packet in preparation for
-        //       // shoving it out the door.
-        //       //
-        //       AddHeader (packet, 0x0800);
-        //       std::cout << "Converting to 0x0800\n";
-
-        //       m_macTxTrace (packet);
-
-        //       //
-        //       // We should enqueue and dequeue the packet to hit the tracing hooks.
-        //       //
-        //       if (m_queue->Enqueue (packet))
-        //         {
-        //           //
-        //           // If the channel is ready for transition we send the packet right now
-        //           // 
-        //           if (m_txMachineState == READY)
-        //             {
-        //               packet = m_queue->Dequeue ();
-        //               m_snifferTrace (packet);
-        //               m_promiscSnifferTrace (packet);
-        //               bool ret = TransmitStart (packet);
-        //               return ret;
-        //             }
-        //           return true;
-        //         }
-
-        //       // Enqueue may fail (overflow)
-
-        //       m_macTxDropTrace (packet);
-        //       return false;
-        //       break;
-        //     }
-        //   default:
-        //       // std::cout << "nothing\n";
-        //     break;
-        // }
-      //
-      // If IsLinkUp() is false it means there is no channel to send any packet 
-      // over so we just hit the drop trace on the packet and return an error.
-      //
       if (IsLinkUp () == false)
         {
           m_macTxDropTrace (packet);
@@ -811,6 +768,7 @@ PointToPointNetDevice::Send (
       // shoving it out the door.
       //
       AddHeader (packet, protocolNumber);
+      std::cout << "Adding header again with" << protocolNumber << "\n";
 
       m_macTxTrace (packet);
 
@@ -1002,13 +960,13 @@ PointToPointNetDevice::EtherToPpp (uint16_t proto)
 }
 
 //figure out return type
-void
-Compress (char* packetData)
+uint8_t*
+Compress (uint8_t* packetData, uint32_t size)
 {
   // p_packet
   // Ptr<Packet> p = p_packet->Copy ();
   // original string len = 36
-  char b[50];
+  char b[size];
 
   // zlib struct
   z_stream defstream;
@@ -1029,12 +987,12 @@ Compress (char* packetData)
 }
 
 //figure out return type
-void
-Decompress (char* packetData)
+uint8_t*
+Decompress (uint8_t* packetData, uint32_t size)
 {
 
-    char b[50];
-    char c[50];
+    char b[size];
+    char c[size];
 
     z_stream infstream;
     infstream.zalloc = Z_NULL;
