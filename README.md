@@ -55,7 +55,18 @@ To install zlib run:
 ```
 sudo apt-get install zlib1g-dev
 ```
+It's important to note that if you get an "undefined reference error" during the linking phase while waf is building, that you add the line 
 
+```
+module.use.append("ZLIB1G")
+```
+to the def build: method of the wscript file in whatever module that is failing.
+You can place it right above 
+```
+    if (bld.env['ENABLE_EXAMPLES']):
+        bld.recurse('examples')
+```
+There's probably a better way to do it, but this ensures that the zlib functions are recognized and built correctly.
 Will probably be using inflate
 ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
 inflate decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush.
