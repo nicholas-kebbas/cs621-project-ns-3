@@ -450,40 +450,20 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
               case 0x4021:  // LZS
                 {
                   std::cout << "recv: Got LZS packet: 0x" << std::hex << currentProtocol << "\n";
-                  // PppHeader newHeader;
-                  // newHeader.SetProtocol(0x0021);
-                  // // // packet->RemoveHeader(header);
-                  // packet->AddHeader(newHeader);
-                  // ProcessHeader(packet, protocol);
-                  // std::cout << "\tConverting to : " << protocol << "\n";
 
-                  // // PppHeader dummy;
-                  // // pCopy->PeekHeader(dummy);
-                  // // uint16_t pCopyProtocol = dummy.GetProtocol();
-                  // std::cout << "Converting to : " << newProtocol << "\n";
-                  // uint16_t ipProtocol = 0x0021;
-                  // ProcessHeader (packet, ipProtocol);
-
-                  // if (!m_promiscCallback.IsNull ())
-                  //   {
-                  //     m_macPromiscRxTrace (pCopy);
-                  //     m_promiscCallback (this, pCopy, ipProtocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
-                  //   }
-
-                  // m_macRxTrace (pCopy);
-                  // m_rxCallback (this, pCopy, ipProtocol, GetRemote ());
-                  // return;
-
-                  // ProcessHeader (pCopy, protocol);
-
-                  // if (!m_promiscCallback.IsNull ())
-                  //   {
-                  //     m_macPromiscRxTrace (originalPacket);
-                  //     m_promiscCallback (this, packet, newProtocol, GetRemote (), GetAddress (), NetDevice::PACKET_HOST);
-                  //   }
-
-                  // m_macRxTrace (originalPacket);
-                  // m_rxCallback (this, packet, newProtocol, GetRemote ());
+                  /* Decompress the compressed packet */
+                  AddHeader (packet, 0x0021);  // Ether to PPP header
+                  std::cout << "Converting to 0x0021\n";
+                  uint32_t packetSize = packet->GetSize();
+                  /* Allocate enough memory to the buffer so we don't get a seg fault */
+                  uint8_t* buffer = new uint8_t[packetSize];
+                  uint32_t serializedPacket = packet -> Serialize(buffer, packetSize);
+                  std::cout << "Packet" << packetSize << "\n";
+                  std::cout << "Serialized Packet: " << serializedPacket << "\n";
+                  /* If we successfully serialized, do the next thing */
+                  std::cout << "Buffer: " << buffer <<"\n";
+                  Decompress(buffer, packetSize);
+                  
                   break;
                 }
             }
@@ -670,46 +650,18 @@ PointToPointNetDevice::Send (
   // std::cout << "Sending packet=" << packet << "to dest=" << &dest << "\n";
   if (compressionEnabled)
     {
-      // Ptr<Packet> pCopy = packet->Copy();
-      // // Packet checking stuff
-      // PppHeader header;
-      // Packet p = pCopy.operator*();  // Get the packet from the Ptr
-      // p.PeekHeader(header); // Get the header from the packet
-      // uint16_t protocol = header.GetProtocol();
+
 
       if (protocolNumber == m_protocol)  // IPv4
         {
-          
 
-          // PppHeader newHeader;
-          // newHeader.SetProtocol(0x4021);
-          // pCopy->RemoveHeader(header);
-          // pCopy->AddHeader(newHeader);
-          // packet.RemoveHeader(header);
-          // packet.AddHeader(newHeader);
-          // PppHeader dummy;
-          // pCopy->PeekHeader(dummy);
-          // uint16_t pCopyrotocol = dummy.GetProtocol();
           std::cout << "sending: packet with 0x" << std::hex << protocolNumber << "\n";
-          // PppHeader newHeader;
-          // newHeader.SetProtocol(0xFFF0);
-          // packet->RemoveHeader(header);
-          // packet->AddHeader(newHeader);
-          // uint16_t newProtocol;
-          // std::cout << "Converting to : " << newProtocol << "\n";
-          //
-          // If IsLinkUp() is false it means there is no channel to send any packet 
-          // over so we just hit the drop trace on the packet and return an error.
-          //
+
           if (IsLinkUp () == false)
             {
               m_macTxDropTrace (packet);
               return false;
             }
-
-          // uint8_t* buffer;
-          // packet->CopyData(buffer, 10);
-          // packet->Packet(buffer, 10);
 
           //
           // Stick a point to point protocol header on the packet in preparation for
@@ -721,13 +673,37 @@ PointToPointNetDevice::Send (
           uint32_t packetSize = packet->GetSize();
           /* Allocate enough memory to the buffer so we don't get a seg fault */
           uint8_t* buffer = new uint8_t[packetSize];
+
           uint32_t serializedPacket = packet -> Serialize(buffer, packetSize);
+          /* So it's seralized, now append the old header protocol, then 
+          compress it, and add it back into the packet.
+
+          Need to figure out how to modify the data of the packet.
+          Once I figure that out, we can append the previous header,
+          which is m_protocol.  
+
+          Also need to figure out when we seralize the packet.
+
+          Once we append the previous header and serializing the packet in some order, 
+          we can compress the data.
+
+          Once the packet is altered, it's already being carried through the point to 
+          point net device correctly, so nothing else should need to be changed.
+          */
           std::cout << "Packet" << packetSize << "\n";
           std::cout << "Serialized Packet: " << serializedPacket << "\n";
           /* If we successfully serialized, do the next thing */
           std::cout << "Buffer: " << buffer <<"\n";
 
+          for (int i = 0; i < int(sizeof(buffer)/sizeof(uint8_t*)); i++){
+            printf("%d", buffer[i]);
+            printf("%d", i);
+          }
+          
+
+          /* Compress the data, but need to change a lot of this */
           Compress(buffer, packetSize);
+          
           // PppHeader dummy;
           // pCopy->PeekHeader(dummy);
           // std::cout << "Sending LZS packet: 0x" << std::hex << dummy.GetProtocol() << "\n";
@@ -961,19 +937,19 @@ PointToPointNetDevice::EtherToPpp (uint16_t proto)
 
 //figure out return type
 uint8_t*
-Compress (uint8_t* packetData, uint32_t size)
+PointToPointNetDevice::Compress (Ptr<Packet> packet, uint8_t* packetData, uint32_t size)
 {
   // p_packet
   // Ptr<Packet> p = p_packet->Copy ();
   // original string len = 36
-  char b[size];
+  uint8_t* b = new uint8_t[size];
 
   // zlib struct
   z_stream defstream;
   defstream.zalloc = Z_NULL;
   defstream.zfree = Z_NULL;
   defstream.opaque = Z_NULL;
-  defstream.avail_in = (uInt)strlen(packetData)+1; // size of input, string + terminator
+  defstream.avail_in = (uInt)sizeof(packetData)+1; // size of input, string + terminator
   defstream.next_in = (Bytef *)packetData; // input char array
   defstream.avail_out = (uInt)sizeof(b); // size of output
   defstream.next_out = (Bytef *)b; // output char array
@@ -984,15 +960,16 @@ Compress (uint8_t* packetData, uint32_t size)
   deflateEnd(&defstream);
 
   printf("Compressed data: %s\n", b);
+  return b;
 }
 
 //figure out return type
 uint8_t*
-Decompress (uint8_t* packetData, uint32_t size)
+PointToPointNetDevice::Decompress (uint8_t* packetData, uint32_t size)
 {
 
-    char b[size];
-    char c[size];
+    uint8_t* b = new uint8_t[size];
+    uint8_t* c = new uint8_t[size];
 
     z_stream infstream;
     infstream.zalloc = Z_NULL;
@@ -1000,7 +977,7 @@ Decompress (uint8_t* packetData, uint32_t size)
     infstream.opaque = Z_NULL;
     
     // need to determine avail_in still
-    infstream.avail_in = (uInt)((strlen(packetData) - strlen(b))); // size of input
+    infstream.avail_in = (uInt)((sizeof(packetData) - sizeof(b))); // size of input
     infstream.next_in = (Bytef *)b; // input char array
     infstream.avail_out = (uInt)sizeof(c); // size of output
     infstream.next_out = (Bytef *)c; // output char array
@@ -1009,6 +986,8 @@ Decompress (uint8_t* packetData, uint32_t size)
     inflateInit(&infstream);
     inflate(&infstream, Z_NO_FLUSH);
     inflateEnd(&infstream);
+
+    return c;
 }
 
 } // namespace ns3
