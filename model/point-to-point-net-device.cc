@@ -462,7 +462,7 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
                   std::cout << "Serialized Packet: " << serializedPacket << "\n";
                   /* If we successfully serialized, do the next thing */
                   std::cout << "Buffer: " << buffer <<"\n";
-                  Decompress(buffer, packetSize);
+                  Decompress(packet, buffer, packetSize);
                   
                   break;
                 }
@@ -671,16 +671,27 @@ PointToPointNetDevice::Send (
           std::cout << "Converting to 0x4021\n";
 
           uint32_t packetSize = packet->GetSize();
-          /* Allocate enough memory to the buffer so we don't get a seg fault */
-          uint8_t* buffer = new uint8_t[packetSize];
 
+          uint32_t adjustedPacketSize = packetSize + 8;
+          std::cout << "M_Protocol is: " << m_protocol <<"\n";
+          std::cout << "Protocol Number is: " << protocolNumber <<"\n";
+
+          /* Allocate enough memory to the buffer so we don't get a seg fault. 
+          Add 8 to house the header code. Might just need 6 but let's do 8. */
+          uint8_t* buffer = new uint8_t[adjustedPacketSize];
           uint32_t serializedPacket = packet -> Serialize(buffer, packetSize);
-          /* So it's seralized, now append the old header protocol, then 
-          compress it, and add it back into the packet.
 
+          /* So it's serealized, now append the old header protocol i guess, then 
+          compress it, and add it back into the packet. */
+
+          /* Adding the old header to the buffer. Then I think we can compress the buffer */
+          char append[] = "0x0021";
+          for (int i = 0; i < 6; i++) {
+            buffer[packetSize + i] = append[i];
+          }
+          /*
           Need to figure out how to modify the data of the packet.
-          Once I figure that out, we can append the previous header,
-          which is m_protocol.  
+          Once I figure that out, we can append the previous header. Hopefully the above does that.  
 
           Also need to figure out when we seralize the packet.
 
@@ -689,20 +700,32 @@ PointToPointNetDevice::Send (
 
           Once the packet is altered, it's already being carried through the point to 
           point net device correctly, so nothing else should need to be changed.
+
+          Because of this, I think we'll want to take packet as input in compression 
+          function, as AddHeader does. 
+
+          Need to start over and better understand this:
+          https://www.nsnam.org/docs/release/3.11/models/html/packets.html
           */
           std::cout << "Packet" << packetSize << "\n";
           std::cout << "Serialized Packet: " << serializedPacket << "\n";
+          std::cout << "As String: " << packet -> ToString() << "\n";
           /* If we successfully serialized, do the next thing */
           std::cout << "Buffer: " << buffer <<"\n";
-
-          for (int i = 0; i < int(sizeof(buffer)/sizeof(uint8_t*)); i++){
-            printf("%d", buffer[i]);
-            printf("%d", i);
-          }
+          // packet -> AddAtEnd();
+          
+          /* Compress the data, but need to change a lot of this */
+          // uint8_t* compressedBuffer = Compress(packet, buffer, adjustedPacketSize);
           
 
-          /* Compress the data, but need to change a lot of this */
-          Compress(buffer, packetSize);
+           Ptr<Packet> newPacket = Create<Packet>();
+           AddHeader (newPacket, 0x4021);
+           newPacket -> CopyData(buffer, adjustedPacketSize);
+           std::cout << "As String 2: " << newPacket -> ToString() << "\n";
+          // std::cout << "Deserializing \n";
+          /* Deserialize the packet and see if that's what we want */
+          /* Buffer isn't big enough for some reason. Maybe need a new empty buffer? */
+          // packet->Deserialize(compressedBuffer, adujstedPacketSize + 32);
           
           // PppHeader dummy;
           // pCopy->PeekHeader(dummy);
@@ -936,6 +959,7 @@ PointToPointNetDevice::EtherToPpp (uint16_t proto)
 }
 
 //figure out return type
+// might just need to take packet as input and modify it within the function
 uint8_t*
 PointToPointNetDevice::Compress (Ptr<Packet> packet, uint8_t* packetData, uint32_t size)
 {
@@ -943,6 +967,7 @@ PointToPointNetDevice::Compress (Ptr<Packet> packet, uint8_t* packetData, uint32
   // Ptr<Packet> p = p_packet->Copy ();
   // original string len = 36
   uint8_t* b = new uint8_t[size];
+  printf("%s\n", packetData);
 
   // zlib struct
   z_stream defstream;
@@ -965,7 +990,7 @@ PointToPointNetDevice::Compress (Ptr<Packet> packet, uint8_t* packetData, uint32
 
 //figure out return type
 uint8_t*
-PointToPointNetDevice::Decompress (uint8_t* packetData, uint32_t size)
+PointToPointNetDevice::Decompress (Ptr<Packet> packet, uint8_t* packetData, uint32_t size)
 {
 
     uint8_t* b = new uint8_t[size];
