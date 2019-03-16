@@ -671,6 +671,7 @@ PointToPointNetDevice::Send (
           std::cout << "Converting to 0x4021\n";
 
           uint32_t packetSize = packet->GetSize();
+          std::cout << "Size of Packet: " << sizeof(packetSize) << "\n";
 
           uint32_t adjustedPacketSize = packetSize + 8;
           std::cout << "M_Protocol is: " << m_protocol <<"\n";
@@ -680,6 +681,7 @@ PointToPointNetDevice::Send (
           Add 8 to house the header code. Might just need 6 but let's do 8. */
           uint8_t* buffer = new uint8_t[adjustedPacketSize];
           uint32_t serializedPacket = packet -> Serialize(buffer, packetSize);
+          std::cout << "Size of Buffer Before Append: " << sizeof(buffer) << "\n";
 
           /* So it's serealized, now append the old header protocol i guess, then 
           compress it, and add it back into the packet. */
@@ -689,6 +691,12 @@ PointToPointNetDevice::Send (
           for (int i = 0; i < 6; i++) {
             buffer[packetSize + i] = append[i];
           }
+
+          for (int i = 0; i < 12; i++) {
+            std::cout << unsigned(buffer[i]) << " ";
+          }
+
+          std::cout << "Size of Buffer After Append: " << sizeof(buffer) << "\n";
           /*
           Need to figure out how to modify the data of the packet.
           Once I figure that out, we can append the previous header. Hopefully the above does that.  
@@ -706,6 +714,9 @@ PointToPointNetDevice::Send (
 
           Need to start over and better understand this:
           https://www.nsnam.org/docs/release/3.11/models/html/packets.html
+
+          "Note that, even if you are in the application layer, handling packets, 
+          and want to write application data, you write it as an ns3::Header or ns3::Trailer."
           */
           std::cout << "Packet" << packetSize << "\n";
           std::cout << "Serialized Packet: " << serializedPacket << "\n";
@@ -713,23 +724,27 @@ PointToPointNetDevice::Send (
           /* If we successfully serialized, do the next thing */
           std::cout << "Buffer: " << buffer <<"\n";
           // packet -> AddAtEnd();
-          
+          /* Get contents of packet */
+          uint8_t* newBuffer = new uint8_t[packetSize];
+          packet -> CopyData(newBuffer, packetSize);
           /* Compress the data, but need to change a lot of this */
-          // uint8_t* compressedBuffer = Compress(packet, buffer, adjustedPacketSize);
-          
+          uint8_t* compressedBuffer = Compress(packet, newBuffer, adjustedPacketSize);
 
-           Ptr<Packet> newPacket = Create<Packet>();
+          std::cout << "Compressed Buffer: " << compressedBuffer << "\n";
+          std::cout << "Compressed Buffer Size: " << sizeof(compressedBuffer) << "\n";
+          
+          /* Create new packet with compressed buffer and size of buffer memory allocation */
+           Ptr<Packet> newPacket = Create<Packet>(compressedBuffer, sizeof(compressedBuffer));
+           /* Add the  correct header */
            AddHeader (newPacket, 0x4021);
-           newPacket -> CopyData(buffer, adjustedPacketSize);
+
+           // newPacket -> CopyData(buffer, adjustedPacketSize);
            std::cout << "As String 2: " << newPacket -> ToString() << "\n";
           // std::cout << "Deserializing \n";
           /* Deserialize the packet and see if that's what we want */
           /* Buffer isn't big enough for some reason. Maybe need a new empty buffer? */
           // packet->Deserialize(compressedBuffer, adujstedPacketSize + 32);
           
-          // PppHeader dummy;
-          // pCopy->PeekHeader(dummy);
-          // std::cout << "Sending LZS packet: 0x" << std::hex << dummy.GetProtocol() << "\n";
 
           m_macTxTrace (packet);
 
