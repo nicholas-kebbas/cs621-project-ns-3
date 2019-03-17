@@ -258,12 +258,6 @@ PointToPointNetDevice::DoInitialize (void)
   NetDevice::DoInitialize ();
 }
 
-// bool
-// PointToPointNetDevice::IsCompressionEnabled (void)
-// {
-//   return compressionEnabled;
-// }
-
 void
 PointToPointNetDevice::NotifyNewAggregate (void)
 {
@@ -438,7 +432,7 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
       if (compressionEnabled)
         {
           // Ptr<Packet> pCopy = originalPacket->Copy();
-          // // Packet checking stuff
+          // Packet checking stuff
           PppHeader header;
           // Packet p = packet.operator*();  // Get the packet from the Ptr
           // /*uint32_t packetBytes =*/ 
@@ -455,6 +449,7 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
                   AddHeader (packet, 0x0021);  // Ether to PPP header
                   std::cout << "Converting to 0x0021\n";
                   uint32_t packetSize = packet->GetSize();
+                  std::cout << "Received As String 1: " << packet -> ToString() << "\n";
                   /* Allocate enough memory to the buffer so we don't get a seg fault */
                   uint8_t* buffer = new uint8_t[packetSize];
                   uint32_t serializedPacket = packet -> Serialize(buffer, packetSize);
@@ -462,8 +457,12 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
                   std::cout << "Serialized Packet: " << serializedPacket << "\n";
                   /* If we successfully serialized, do the next thing */
                   std::cout << "Buffer: " << buffer <<"\n";
-                  Decompress(packet, buffer, packetSize);
-                  
+                  uint8_t* decompressedBuffer = Decompress(packet, buffer, packetSize);
+
+                  /* Create the new, decompressed packet. Change packet to point to that. */
+                  packet = Create<Packet>(decompressedBuffer, sizeof(decompressedBuffer));
+                  AddHeader(packet, 0x0021);
+                  std::cout << "Received As String 2: " << packet -> ToString() << "\n";
                   break;
                 }
             }
@@ -689,6 +688,7 @@ PointToPointNetDevice::Send (
           /* Adding the old header to the buffer. Then I think we can compress the buffer */
           char append[] = "0x0021";
           for (int i = 0; i < 6; i++) {
+            std::cout << "appending: " << append[i];
             buffer[packetSize + i] = append[i];
           }
 
@@ -720,7 +720,7 @@ PointToPointNetDevice::Send (
           */
           std::cout << "Packet" << packetSize << "\n";
           std::cout << "Serialized Packet: " << serializedPacket << "\n";
-          std::cout << "As String: " << packet -> ToString() << "\n";
+          std::cout << "Sent As String: " << packet -> ToString() << "\n";
           /* If we successfully serialized, do the next thing */
           std::cout << "Buffer: " << buffer <<"\n";
           // packet -> AddAtEnd();
@@ -739,19 +739,19 @@ PointToPointNetDevice::Send (
            AddHeader (newPacket, 0x4021);
 
            // newPacket -> CopyData(buffer, adjustedPacketSize);
-           std::cout << "As String 2: " << newPacket -> ToString() << "\n";
+           std::cout << "Sent As String 2: " << newPacket -> ToString() << "\n";
           // std::cout << "Deserializing \n";
           /* Deserialize the packet and see if that's what we want */
           /* Buffer isn't big enough for some reason. Maybe need a new empty buffer? */
           // packet->Deserialize(compressedBuffer, adujstedPacketSize + 32);
           
-
-          m_macTxTrace (packet);
+           /* Now send newPacket */
+          m_macTxTrace (newPacket);
 
           //
           // We should enqueue and dequeue the packet to hit the tracing hooks.
           //
-          if (m_queue->Enqueue (packet))
+          if (m_queue->Enqueue (newPacket))
             {
               //
               // If the channel is ready for transition we send the packet right now
@@ -759,15 +759,15 @@ PointToPointNetDevice::Send (
               if (m_txMachineState == READY)
                 {
                   packet = m_queue->Dequeue ();
-                  m_snifferTrace (packet);
-                  m_promiscSnifferTrace (packet);
-                  bool ret = TransmitStart (packet);
+                  m_snifferTrace (newPacket);
+                  m_promiscSnifferTrace (newPacket);
+                  bool ret = TransmitStart (newPacket);
                   return ret;
                 }
               return true;
             }
           // Enqueue may fail (overflow)
-          m_macTxDropTrace (packet);
+          m_macTxDropTrace (newPacket);
           return false;
         }
 
