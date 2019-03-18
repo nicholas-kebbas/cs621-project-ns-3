@@ -30,6 +30,11 @@
 #include "udp-app-client.h"
 #include <chrono>
 #include <thread>
+#include <iostream>
+#include <unistd.h>
+#include <fcntl.h>
+#include <fstream>
+#include <bitset>
 
 namespace ns3 {
 
@@ -94,10 +99,20 @@ UdpAppClient::UdpAppClient ()
   m_sendEvent = EventId ();
   m_data = 0;
   m_dataSize = 0;
+  uint8_t packets[6144000] = {};
+  packets[0] = 0;
+  if (packets[0] == 0) {
+
+  }
+  //uint8_t * packets2;
+
+//  std::cout << "location of packets: " << &packets << "\n";
+    
 }
 
 UdpAppClient::~UdpAppClient()
 {
+
   NS_LOG_FUNCTION (this);
   m_socket = 0;
 
@@ -132,6 +147,8 @@ void
 UdpAppClient::StartApplication (void)
 {
   NS_LOG_FUNCTION (this);
+
+  FillInPacketArray(packets);
 
   if (m_socket == 0)
     {
@@ -316,7 +333,19 @@ UdpAppClient::Send (void)
   Ptr<Packet> p;
   if (m_dataSize)
     {
-      //
+
+      // MEMCPY the correct portion of packets to mdata
+    	delete [] m_data;
+      	m_data = new uint8_t [m_dataSize];
+      	//m_dataSize = m_dataSize;
+
+      	int i = m_sent_l - 6000;
+      	i = 1024 * i;
+
+      	std::copy(packets + i, packets + i + 1024, m_data);
+
+      	//std::cout << m_data << "\n";
+
       // If m_dataSize is non-zero, we have a data buffer of the same size that we
       // are expected to copy and send.  This state of affairs is created if one of
       // the Fill functions is called.  In this case, m_size must have been set
@@ -329,6 +358,12 @@ UdpAppClient::Send (void)
     }
   else
     {
+    	// so the high entropy packets aren't longer b/c of additional copying
+    	//delete [] m_data;
+      	//m_data = new uint8_t [1024];
+      	//int i = m_sent_l * 1024;     	
+      	//std::copy(packets + i, packets + i + 1024, m_data);
+
       //
       // If m_dataSize is zero, the client has indicated that it doesn't care
       // about the data itself either by specifying the data size by setting
@@ -384,14 +419,16 @@ UdpAppClient::Send (void)
                    Inet6SocketAddress::ConvertFrom (m_peerAddress).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort ());
     }
 
-  if (m_sent_l <= m_count) 
+  if (m_sent_l < m_count) 
     {
       ScheduleTransmit (m_interval);
     }
-  else if (m_sent_l == m_count+1)
+  else if (m_sent_l == m_count)
     {
-      // std::cout << "sent " << m_sent_l << " low entropy packets. Send the next high entropy packets.\n";
+      std::cout << "sent " << m_sent_l << " low entropy packets. Send the next high entropy packets.\n";
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      //TODO critical point
+      m_dataSize = 1024;
       ScheduleTransmit (m_interval);  
       // ScheduleTransmit (Seconds (20.0));
     }
@@ -429,4 +466,58 @@ UdpAppClient::HandleRead (Ptr<Socket> socket)
     }
 }
 
+void
+UdpAppClient::FillInPacketArray(uint8_t packets[6144000])
+{ 
+
+    int i = 0;
+//    int j;
+    std::ifstream randomfile("randomfile");
+    if (!randomfile.good()) { // if file does not already exist
+        std::ofstream randomoutfile("randomfile"); // makes file and fills it in
+        uint8_t buffer[768000]; // 128*6000 random 8-bit #s
+        int fd = open("/dev/random", O_RDONLY);
+        int size = read(fd, buffer, 768000); // put it in buffer
+        size ++;
+        //buffer now contains the random data
+        close(fd);
+        for (i = 0; i < 6000; ++i) { // 6000 packets: 1 line per
+            for (int j = 0; j < 128; j++) { // 128 numbers * 8 bits = 1024
+                randomoutfile << std::bitset<8>(buffer[(128 * i) + j]);
+            }
+            randomoutfile << "\n";
+        }
+        randomoutfile.close();
+    }
+    std::string line;
+    i = 0;
+    // reads file in a line at a time as a string
+    // converts string to uint8_t* and puts in packets array
+    while (std::getline(randomfile, line))
+    {
+        //std::istringstream iss(line);
+        //cout << line;
+        //cout << "\n";
+        //cout << sizeof(line);
+        const uint8_t* p = reinterpret_cast<const uint8_t*>(line.c_str());
+        for (int x = 0; x < 1024; x++) {
+            packets[(i*1024) + x] = p[x];
+        }
+
+
+       //std::cout << sizeof(line) << "\n";
+        //if (i > 2) {
+        //    int x = i - 1;
+        //    std::cout << i << " " << sizeof(&packets[i]) <<" " << packets[i] << "\n";
+        //    std::cout << x << " " << sizeof(&packets[i-1]) <<" " << packets[i-1] << "\n";
+        //    std::cout << i-2 << " " << packets[i-2] << "\n\n";
+        //}
+        i++;
+    }
+        
+
+    //std::randomfile.close();
+    //TODO ??
+
+}
 } // Namespace ns3

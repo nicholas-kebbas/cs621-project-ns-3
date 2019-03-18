@@ -667,7 +667,8 @@ PointToPointNetDevice::Send (
           // shoving it out the door.
           //
           AddHeader (packet, 0x4021);  // Ether to PPP header
-          std::cout << "Converting to 0x4021\n";
+          //TODO uncomment this
+          //std::cout << "Converting to 0x4021\n";
 
           uint32_t packetSize = packet->GetSize();
           std::cout << "Size of Packet: " << sizeof(packetSize) << "\n";
