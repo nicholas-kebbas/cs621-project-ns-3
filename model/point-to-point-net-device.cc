@@ -450,7 +450,8 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
             {
               case 0x4021:  // LZS
                 {
-                  std::cout << "recv: Got LZS packet: 0x" << std::hex << currentProtocol << "\n";
+                  //TODO uncomment this
+                  //std::cout << "recv: Got LZS packet: 0x" << std::hex << currentProtocol << "\n";
                   // PppHeader newHeader;
                   // newHeader.SetProtocol(0x0021);
                   // // // packet->RemoveHeader(header);
@@ -689,7 +690,8 @@ PointToPointNetDevice::Send (
           // PppHeader dummy;
           // pCopy->PeekHeader(dummy);
           // uint16_t pCopyrotocol = dummy.GetProtocol();
-          std::cout << "sending: packet with 0x" << std::hex << protocolNumber << "\n";
+          //TODO uncomment this
+          //std::cout << "sending: packet with 0x" << std::hex << protocolNumber << "\n";
           // PppHeader newHeader;
           // newHeader.SetProtocol(0xFFF0);
           // packet->RemoveHeader(header);
@@ -715,7 +717,8 @@ PointToPointNetDevice::Send (
           // shoving it out the door.
           //
           AddHeader (packet, 0x4021);  // Ether to PPP header
-          std::cout << "Converting to 0x4021\n";
+          //TODO uncomment this
+          //std::cout << "Converting to 0x4021\n";
 
           // PppHeader dummy;
           // pCopy->PeekHeader(dummy);
