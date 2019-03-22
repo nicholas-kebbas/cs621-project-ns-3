@@ -233,8 +233,10 @@ private:
   uint16_t m_protocol; //<! protocol to compress
   bool compressionEnabled;  //<! If should do compression
 
-  uint8_t* Compress (Ptr<Packet> packet, uint8_t* input, uint32_t size);
-  uint8_t* Decompress (Ptr<Packet> packet, uint8_t* input, uint32_t size);
+  uint8_t* Compress (uint8_t* input, uint8_t* output, uint32_t size);
+  uint8_t* Decompress (uint8_t* input, uint8_t* output, uint32_t size);
+  uint8_t* CompressExample (uint32_t size, uint8_t* a, uint8_t* b);
+  uint8_t* DecompressExample (uint32_t size, uint8_t* b, uint8_t* c);
   /**
    * \returns the address of the remote device connected to this device
    * through the point to point channel.
