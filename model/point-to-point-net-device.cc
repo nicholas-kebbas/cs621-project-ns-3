@@ -656,10 +656,7 @@ PointToPointNetDevice::Send (
               return false;
             }
 
-          // Stick a point to point protocol header on the packet in preparation for
-          // shoving it out the door.
-          // AddHeader (packet, 0x4021);  // Ether to PPP header
-          // TODO uncomment this
+
           uint32_t packetSize = packet->GetSize();
           //printf ("Size of Packet in Compress: %d  \n", packetSize);
           uint32_t adjustedPacketSize = packetSize + 8;
@@ -669,12 +666,6 @@ PointToPointNetDevice::Send (
           uint8_t* buffer = new uint8_t[adjustedPacketSize];
           uint8_t* newBuffer = new uint8_t[adjustedPacketSize];
           packet -> CopyData(buffer, adjustedPacketSize);
-
-          /* So it's serealized, now append the old header protocol i guess, then 
-          compress it, and add it back into the packet. */
-
-          /* Adding the old header to the buffer. Then I think we can compress the buffer.
-          I think this is probably the wrong way to do it. */
 
           //printf("Packet: %d \n ", packetSize);
           //std::cout << "Sent As String: " << packet -> ToString() << "\n";
@@ -687,9 +678,10 @@ PointToPointNetDevice::Send (
           Compress(newBuffer, outputData, adjustedPacketSize);
           //Decompress(outputData, thirdBuffer, adjustedPacketSize);
 
-          /* Might be missing the "append old header" step */
           packet = Create<Packet>(outputData, adjustedPacketSize);
           /* Add the  correct header before sending it */
+          // Stick a point to point protocol header on the packet in preparation for
+          // shoving it out the door.
           AddHeader (packet, 0x4021);
           /* This is 1054 instead of 1062 for some reason */
           //printf("Exiting Packet Size: %d \n", packet -> GetSize());
