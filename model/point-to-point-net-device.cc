@@ -432,37 +432,35 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
 
       if (compressionEnabled)
         {
-          // Ptr<Packet> pCopy = originalPacket->Copy();
-          // Packet checking stuff
           PppHeader header;
-          // Packet p = packet.operator*();  // Get the packet from the Ptr
-          // /*uint32_t packetBytes =*/ 
           packet->PeekHeader(header); // Get the header from the packet
           uint16_t currentProtocol = header.GetProtocol();
-          // std::cout << "recv: got packet: 0x" << std::hex << currentProtocol << "\n";
           switch (currentProtocol)
             {
               case 0x4021:  // LZS
                 {
-                  std::cout << "recv: Got LZS packet: 0x" << std::hex << currentProtocol << "\n";
 
+                  //std::cout << "recv: Got LZS packet: 0x" << std::hex << currentProtocol << "\n";
                   /* Decompress the compressed packet */
                   // Ether to PPP header
+                  /* Remove the header so it's back to what we compressed */
+                  packet -> RemoveHeader(header);
                   uint32_t packetSize = packet->GetSize();
-                  std::cout << "Received As String 1: " << packet -> ToString() << "\n";
+                  //std::cout << "Received As String 1: " << packet -> ToString() << "\n";
                   /* Allocate enough memory to the buffer so we don't get a seg fault */
                  //  uint32_t adjustedPacketSize = packetSize + 8;
                   uint8_t* buffer = new uint8_t[packetSize];
                   uint8_t* newBuffer = new uint8_t[packetSize];
                   packet -> CopyData(buffer, packetSize);
-                  printf ("Size of Packet in Decompress: %d  \n", packetSize);
+                  //printf("Packet Data In Receive: %s\n", buffer);
+                  //printf ("Size of Packet in Decompress: %d  \n", packetSize);
                   /* If we successfully serialized, do the next thing */
-                  uint8_t* decompressedBuffer = Decompress(buffer, newBuffer, packetSize);
+                  Decompress(buffer, newBuffer, packetSize);
                   /* Create the new, decompressed packet. Change packet to point to that. */
-                  packet = Create<Packet>(decompressedBuffer, packetSize);
-                  std::cout << "Adding 0x0021\n";
+                  packet = Create<Packet>(newBuffer, packetSize);
+                  //std::cout << "Adding 0x0021\n";
                   AddHeader(packet, 0x0021);
-                  std::cout << "Received As String 2: " << packet -> ToString() << "\n";
+                  //std::cout << "Received As String 2: " << packet -> ToString() << "\n";
                   break;
                 }
             }
@@ -494,7 +492,6 @@ PointToPointNetDevice::Receive (Ptr<Packet> packet)
           // there is no difference in what the promisc callback sees and what the
           // normal receive callback sees.
           //
-          // ProcessHeader (packet, protocol);
           ProcessHeader (packet, protocol);
 
 
@@ -653,8 +650,6 @@ PointToPointNetDevice::Send (
       if (protocolNumber == m_protocol)  // IPv4
         {
 
-          std::cout << "sending: packet with 0x" << std::hex << protocolNumber << "\n";
-
           if (IsLinkUp () == false)
             {
               m_macTxDropTrace (packet);
@@ -663,20 +658,14 @@ PointToPointNetDevice::Send (
 
           // Stick a point to point protocol header on the packet in preparation for
           // shoving it out the door.
-
           // AddHeader (packet, 0x4021);  // Ether to PPP header
           // TODO uncomment this
-          // std::cout << "Converting to 0x4021\n";
-
           uint32_t packetSize = packet->GetSize();
-          printf ("Size of Packet in Compress: %d  \n", packetSize);
+          //printf ("Size of Packet in Compress: %d  \n", packetSize);
           uint32_t adjustedPacketSize = packetSize + 8;
-          printf ("Adjusted PacketSize: %d  \n", adjustedPacketSize);
-          std::cout << "M_Protocol is: " << m_protocol <<"\n";
-          std::cout << "Protocol Number is: " << protocolNumber <<"\n";
-
-          /* Allocate enough memory to the buffer so we don't get a seg fault. 
-          Add 8 to house the header code since a header is 8 bytes. */
+          //std::cout << "M_Protocol is: " << m_protocol <<"\n";
+          //std::cout << "Protocol Number is: " << protocolNumber <<"\n";
+          /*Add 8 to house the header code since a header is 8 bytes. */
           uint8_t* buffer = new uint8_t[adjustedPacketSize];
           uint8_t* newBuffer = new uint8_t[adjustedPacketSize];
           packet -> CopyData(buffer, adjustedPacketSize);
@@ -687,40 +676,32 @@ PointToPointNetDevice::Send (
           /* Adding the old header to the buffer. Then I think we can compress the buffer.
           I think this is probably the wrong way to do it. */
 
-          printf("Packet: %d \n ", packetSize);
-          std::cout << "Sent As String: " << packet -> ToString() << "\n";
-          // packet -> AddAtEnd();
+          //printf("Packet: %d \n ", packetSize);
+          //std::cout << "Sent As String: " << packet -> ToString() << "\n";
           /* Get contents of packet */
-          // uint8_t* thirdBuffer = new uint8_t[adjustedPacketSize];
+          
           packet -> CopyData(newBuffer, adjustedPacketSize);
           uint8_t* outputData = new uint8_t[adjustedPacketSize];
+          // uint8_t* thirdBuffer = new uint8_t[adjustedPacketSize];
           /* Compress the data test. This seems to be working */
           Compress(newBuffer, outputData, adjustedPacketSize);
-          // Decompress(outputData, thirdBuffer, adjustedPacketSize);
-
-          /** EXAMPLE. Get this working first */
-          // uint8_t a[50] = "Hello Hello Hello Hello Hello Hello!"; 
-          // uint8_t b[50];
-          // uint8_t c[50];
-          // CompressExample(adjustedPacketSize, a, b);
-          // DecompressExample(adjustedPacketSize, b, c);
-          /* Create new packet with compressed buffer and size of buffer memory allocation */
+          //Decompress(outputData, thirdBuffer, adjustedPacketSize);
 
           /* Might be missing the "append old header" step */
-           Ptr<Packet> newPacket = Create<Packet>(outputData, adjustedPacketSize);
-           /* Add the  correct header before sending it */
-           AddHeader (newPacket, 0x4021);
-           /* This is 1054 instead of 1062 for some reason */
-           printf("Exiting Packet Size: %d \n", newPacket -> GetSize());
-           // newPacket -> CopyData(buffer, adjustedPacketSize);
-           std::cout << "Sent As String 2: " << newPacket -> ToString() << "\n";          
-           /* Now send newPacket */
-          m_macTxTrace (newPacket);
+          packet = Create<Packet>(outputData, adjustedPacketSize);
+          /* Add the  correct header before sending it */
+          AddHeader (packet, 0x4021);
+          /* This is 1054 instead of 1062 for some reason */
+          //printf("Exiting Packet Size: %d \n", packet -> GetSize());
+          // newPacket -> CopyData(buffer, adjustedPacketSize);
+          //std::cout << "Sent As String 2: " << packet -> ToString() << "\n";          
+          /* Now send newPacket */
+          m_macTxTrace (packet);
 
           //
           // We should enqueue and dequeue the packet to hit the tracing hooks.
           //
-          if (m_queue->Enqueue (newPacket))
+          if (m_queue->Enqueue (packet))
             {
               //
               // If the channel is ready for transition we send the packet right now
@@ -728,15 +709,15 @@ PointToPointNetDevice::Send (
               if (m_txMachineState == READY)
                 {
                   packet = m_queue->Dequeue ();
-                  m_snifferTrace (newPacket);
-                  m_promiscSnifferTrace (newPacket);
-                  bool ret = TransmitStart (newPacket);
+                  m_snifferTrace (packet);
+                  m_promiscSnifferTrace (packet);
+                  bool ret = TransmitStart (packet);
                   return ret;
                 }
               return true;
             }
           // Enqueue may fail (overflow)
-          m_macTxDropTrace (newPacket);
+          m_macTxDropTrace (packet);
           return false;
         }
 
@@ -948,12 +929,9 @@ PointToPointNetDevice::EtherToPpp (uint16_t proto)
 uint8_t*
 PointToPointNetDevice::Compress (uint8_t* packetData, uint8_t* outputData, uint32_t size)
 {
-  // p_packet
-  // Ptr<Packet> p = p_packet->Copy ();
-  // original string len = 36
   
   printf("Packet Data In Compress: %s\n", packetData);
-  printf("Size in Compress: %d \n", size);
+  //printf("Size in Compress: %d \n", size);
 
   // zlib struct
   z_stream defstream;
@@ -979,16 +957,13 @@ PointToPointNetDevice::Compress (uint8_t* packetData, uint8_t* outputData, uint3
 uint8_t*
 PointToPointNetDevice::Decompress (uint8_t* packetData, uint8_t* outputData, uint32_t size)
 {
-
-    uint8_t* c = new uint8_t[size];
-    printf("Size in Decompress: %d \n", size);
+    printf("Packet Data In Decompress: %s\n", packetData);
+    //printf("Size in Decompress: %d \n", size);
     z_stream infstream;
     infstream.zalloc = Z_NULL;
     infstream.zfree = Z_NULL;
     infstream.opaque = Z_NULL;
     
-    // need to determine avail_in still
-    // Don't know what to do for avail_in
     infstream.avail_in = (uInt)(size-strlen((char*)packetData)); // size of input
     infstream.next_in = (Bytef *)packetData; // input char array
     infstream.avail_out = (uInt)(size); // size of output
@@ -1001,78 +976,7 @@ PointToPointNetDevice::Decompress (uint8_t* packetData, uint8_t* outputData, uin
 
     printf("Decompressed data: %s\n", outputData);
     
-    return c;
-}
-
-uint8_t*
-PointToPointNetDevice::CompressExample (uint32_t size, uint8_t* a, uint8_t* b)
-{
-     
-
-    printf("Uncompressed size is: %lu\n", strlen((char*)a));
-    printf("Uncompressed string is: %s\n", a);
-
-
-    printf("\n----------\n\n");
-
-    // STEP 1.
-    // deflate a into b. (that is, compress a into b)
-    
-    // zlib struct
-    z_stream defstream;
-    defstream.zalloc = Z_NULL;
-    defstream.zfree = Z_NULL;
-    defstream.opaque = Z_NULL;
-    // setup "a" as the input and "b" as the compressed output
-    defstream.avail_in = (uInt)strlen((char*)a)+1; // size of input, string + terminator
-    defstream.next_in = (Bytef *)a; // input char array
-    defstream.avail_out = (uInt)(size); // size of output
-    defstream.next_out = (Bytef *)b; // output char array
-    
-    // the actual compression work.
-    deflateInit(&defstream, Z_BEST_COMPRESSION);
-    deflate(&defstream, Z_FINISH);
-    deflateEnd(&defstream);
-     
-    // This is one way of getting the size of the output
-    printf("Compressed size is: %lu\n", strlen((char*)b));
-    printf("Compressed string is: %s\n", b);
-    
-
-    printf("\n----------\n\n");
-    return b;
-}
-
-//figure out return type
-uint8_t*
-PointToPointNetDevice::DecompressExample (uint32_t size, uint8_t* b, uint8_t* c)
-{
-
-    printf("Input size is: %lu\n", strlen((char*)b));
-    printf("Input string is: %s\n", (char*)b);
-
-
-    printf("\n----------\n\n");
-
-    z_stream infstream;
-    infstream.zalloc = Z_NULL;
-    infstream.zfree = Z_NULL;
-    infstream.opaque = Z_NULL;
-    // setup "b" as the input and "c" as the compressed output
-    // changes this line 
-    infstream.avail_in = (uInt)(size-strlen((char*)b)); // size of input
-    infstream.next_in = (Bytef *)b; // input char array
-    infstream.avail_out = (uInt)(size); // size of output
-    infstream.next_out = (Bytef *)c; // output char array
-     
-    // the actual DE-compression work.
-    inflateInit(&infstream);
-    inflate(&infstream, Z_NO_FLUSH);
-    inflateEnd(&infstream);
-     
-    printf("Uncompressed size is: %lu\n", strlen((char*)c));
-    printf("Uncompressed string is: %s\n", c);
-    return c;
+    return outputData;
 }
 
 } // namespace ns3
