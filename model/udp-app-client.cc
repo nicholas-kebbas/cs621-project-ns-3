@@ -469,6 +469,7 @@ UdpAppClient::HandleRead (Ptr<Socket> socket)
 void
 UdpAppClient::FillInPacketArray(uint8_t packets[6144000])
 { 
+  std::cout << "Random fill running";
 
     int i = 0;
 //    int j;

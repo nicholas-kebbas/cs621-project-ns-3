@@ -66,8 +66,9 @@ You can place it right above
     if (bld.env['ENABLE_EXAMPLES']):
         bld.recurse('examples')
 ```
-There's probably a better way to do it, but this ensures that the zlib functions are recognized and built correctly.
-Will probably be using inflate
-ZEXTERN int ZEXPORT inflate OF((z_streamp strm, int flush));
-inflate decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush.
+This ensures that the zlib functions are recognized and built correctly.
+
+We're using zlib's implementaton of deflate in the point to point net device class to compress the packets before sending them. We're then using inflate once the packet has been received in order to return the packet to its previous state.   
+
+Deflate decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush. Inflate does the opposite, and returns the original data of the packet.
 

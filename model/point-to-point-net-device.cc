@@ -922,7 +922,7 @@ uint8_t*
 PointToPointNetDevice::Compress (uint8_t* packetData, uint8_t* outputData, uint32_t size)
 {
   
-  printf("Packet Data In Compress: %s\n", packetData);
+  //printf("Packet Data In Compress: %s\n", packetData);
   //printf("Size in Compress: %d \n", size);
 
   // zlib struct
@@ -941,7 +941,7 @@ PointToPointNetDevice::Compress (uint8_t* packetData, uint8_t* outputData, uint3
   deflate(&defstream, Z_FINISH);
   deflateEnd(&defstream);
 
-  printf("Compressed data: %s\n", outputData);
+  //printf("Compressed data: %s\n", outputData);
   return outputData;
 }
 
@@ -949,7 +949,7 @@ PointToPointNetDevice::Compress (uint8_t* packetData, uint8_t* outputData, uint3
 uint8_t*
 PointToPointNetDevice::Decompress (uint8_t* packetData, uint8_t* outputData, uint32_t size)
 {
-    printf("Packet Data In Decompress: %s\n", packetData);
+   // printf("Packet Data In Decompress: %s\n", packetData);
     //printf("Size in Decompress: %d \n", size);
     z_stream infstream;
     infstream.zalloc = Z_NULL;
@@ -966,7 +966,7 @@ PointToPointNetDevice::Decompress (uint8_t* packetData, uint8_t* outputData, uin
     inflate(&infstream, Z_NO_FLUSH);
     inflateEnd(&infstream);
 
-    printf("Decompressed data: %s\n", outputData);
+    // printf("Decompressed data: %s\n", outputData);
     
     return outputData;
 }
