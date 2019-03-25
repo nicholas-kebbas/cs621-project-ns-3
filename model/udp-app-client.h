@@ -173,6 +173,7 @@ private:
   uint16_t m_peerPort; //!< Remote peer port
   EventId m_sendEvent; //!< Event to send the next packet
   uint8_t packets[6144000]; // !< Data structure for storing random data
+  uint8_t lowPackets[1024];
   //uint8_t * packets2;
   /// Callbacks for tracing the packet Tx events
   TracedCallback<Ptr<const Packet> > m_txTrace;

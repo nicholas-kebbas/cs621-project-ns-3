@@ -104,6 +104,13 @@ UdpAppClient::UdpAppClient ()
   if (packets[0] == 0) {
 
   }
+  uint8_t lowPackets[1024] = {};
+  for (int i = 0; i < 1024; i++) {
+    lowPackets[i] = 0;
+  }
+  if (lowPackets[0] == 0 ) {
+    std::cout << "in constructor\n";
+  }
   //uint8_t * packets2;
 
 //  std::cout << "location of packets: " << &packets << "\n";
@@ -147,6 +154,8 @@ void
 UdpAppClient::StartApplication (void)
 {
   NS_LOG_FUNCTION (this);
+  std::thread::id this_id = std::this_thread::get_id();
+  std::cout << "thread ID: " << this_id << "\n";
 
   FillInPacketArray(packets);
 
@@ -331,13 +340,15 @@ UdpAppClient::Send (void)
   NS_ASSERT (m_sendEvent.IsExpired ());
 
   Ptr<Packet> p;
+  std::thread::id this_id = std::this_thread::get_id();
   if (m_dataSize)
     {
+      //std::cout << "m_dataSize\n";
 
       // MEMCPY the correct portion of packets to mdata
     	delete [] m_data;
       	m_data = new uint8_t [m_dataSize];
-      	//m_dataSize = m_dataSize;
+      	m_dataSize = m_dataSize;
 
       	int i = m_sent_l - 6000;
       	i = 1024 * i;
@@ -355,14 +366,15 @@ UdpAppClient::Send (void)
       NS_ASSERT_MSG (m_data, "UdpAppClient::Send(): m_dataSize but no m_data");
       // std::cout << "Reached max packets: " << (m_sent_l == m_count) << "\n";
       p = Create<Packet> (m_data, m_dataSize);
+      //p = Create<Packet> (m_size);
     }
   else
     {
     	// so the high entropy packets aren't longer b/c of additional copying
-    	//delete [] m_data;
-      	//m_data = new uint8_t [1024];
-      	//int i = m_sent_l * 1024;     	
-      	//std::copy(packets + i, packets + i + 1024, m_data);
+    	delete [] m_data;
+      	m_data = new uint8_t [1024];
+      	int i = m_sent_l * 1024;     	
+      	std::copy(packets + i, packets + i + 1024, m_data);
 
       //
       // If m_dataSize is zero, the client has indicated that it doesn't care
@@ -371,7 +383,12 @@ UdpAppClient::Send (void)
       // this case, we don't worry about it either.  But we do allow m_size
       // to have a value different from the (zero) m_dataSize.
       //
-      p = Create<Packet> (m_size);
+      
+      //std::copy(lowPackets + 0, lowPackets + 1024, m_data);
+      p = Create<Packet> (lowPackets, 1024);
+
+
+      //p = Create<Packet> (m_size);
     }
   Address localAddress;
   m_socket->GetSockName (localAddress);
@@ -419,14 +436,17 @@ UdpAppClient::Send (void)
                    Inet6SocketAddress::ConvertFrom (m_peerAddress).GetIpv6 () << " port " << Inet6SocketAddress::ConvertFrom (m_peerAddress).GetPort ());
     }
 
-  if (m_sent_l < m_count) 
+  if (m_sent_l <= m_count ) // from 1 to 
     {
       ScheduleTransmit (m_interval);
     }
-  else if (m_sent_l == m_count)
+  else if (m_sent_l == m_count + 1) // THE FIRST HIGH ENTROPY PACKET
     {
-      std::cout << "sent " << m_sent_l << " low entropy packets. Send the next high entropy packets.\n";
+      std::cout << this_id << " sent " << m_sent_l << " low entropy packets. Send the next high entropy packets.\n";
+      std::cout << m_count << " m_count\n";
+      std::cout << "CLIENT starting wait\n";
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      std::cout << "CLIENT done waiting, sending 1st high entropy\n";
       //TODO critical point
       m_dataSize = 1024;
       ScheduleTransmit (m_interval);  
